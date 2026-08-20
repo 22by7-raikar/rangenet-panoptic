@@ -1,0 +1,1 @@
+"""Panoptic inference integration."""

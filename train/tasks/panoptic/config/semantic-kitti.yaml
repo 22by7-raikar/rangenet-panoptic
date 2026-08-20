@@ -1,0 +1,21 @@
+# Labels are the contiguous learning ids emitted by the pretrained RangeNet++.
+# Their original SemanticKITTI equivalents are recovered from data_cfg.yaml.
+thing_classes: [1, 2, 3, 4, 5, 6, 7, 8]
+confidence_threshold: 0.0
+connectivity: 4
+default:
+  base_distance: 0.35
+  range_scale: 0.015
+  min_points: 1
+
+# Pedestrians/cyclists need tighter joins than road vehicles. These are initial
+# values for ablation on sequence 08, not learned model parameters.
+class_parameters:
+  1: {base_distance: 0.45, range_scale: 0.018, min_points: 3}  # car
+  2: {base_distance: 0.20, range_scale: 0.010, min_points: 2}  # bicycle
+  3: {base_distance: 0.25, range_scale: 0.010, min_points: 2}  # motorcycle
+  4: {base_distance: 0.55, range_scale: 0.020, min_points: 3}  # truck
+  5: {base_distance: 0.50, range_scale: 0.020, min_points: 3}  # other vehicle
+  6: {base_distance: 0.18, range_scale: 0.010, min_points: 2}  # person
+  7: {base_distance: 0.22, range_scale: 0.010, min_points: 2}  # bicyclist
+  8: {base_distance: 0.22, range_scale: 0.010, min_points: 2}  # motorcyclist
