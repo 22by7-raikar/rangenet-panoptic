@@ -4,6 +4,10 @@
     python infer.py -m logs/lpsad/best.pt -d /data/semantic-kitti -o preds \
         --split valid
 
+Clustering settings can be changed per run (paper Table IV ablations):
+
+    python infer.py ... --cluster features=center learned_radius=false
+
 Labels go to <out>/sequences/XX/predictions/NNNNNN.label as
 ``semantic_id | (instance_id << 16)``, the format of the official benchmark
 and semantic-kitti-api.
@@ -15,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import yaml
 from torch.utils.data import DataLoader
 
 from lpsad.cluster import panoptic_inference
@@ -33,16 +38,24 @@ def main():
     ap.add_argument("--split", default="valid", choices=["train", "valid", "test"])
     ap.add_argument("--batch-size", type=int, default=1)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--cluster", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="override clustering settings without retraining, e.g. "
+                         "features=center learned_radius=false fixed_center_radius=1.0")
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ckpt = torch.load(args.model, map_location=device, weights_only=False)
     cfg = ckpt["config"]
+    for item in args.cluster:
+        key, value = item.split("=", 1)
+        cfg["cluster"][key] = yaml.safe_load(value)
     labels = build_label_space(cfg)
     model = LPSAD(cfg, labels.nclasses, labels.ncategories).to(device)
     model.load_state_dict(ckpt["model"])
     model.eval()
     scale = tuple(ckpt["radius_scale"])
+    if cfg["cluster"]["radius_scale"] != "auto":
+        scale = (float(cfg["cluster"]["radius_scale"]),) * 2
     is_thing = torch.from_numpy(labels.is_thing()).to(device)
     inverse = torch.from_numpy(labels.inverse_lut).to(device)
     print(f"epoch {ckpt['epoch']}, radius scale {scale}")
