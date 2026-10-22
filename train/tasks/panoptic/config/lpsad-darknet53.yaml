@@ -1,0 +1,116 @@
+################################################################################
+# LPSAD (Milioto et al., IROS 2020) on a RangeNet++ Darknet53 backbone.
+# Paths are relative to this file unless absolute.
+################################################################################
+
+# class definitions (shared with the semantic task)
+labels: "../../semantic/config/labels/semantic-kitti.yaml"
+
+################################################################################
+# panoptic definitions (indices are xentropy classes from learning_map)
+################################################################################
+panoptic:
+  things: [1, 2, 3, 4, 5, 6, 7, 8]  # car .. motorcyclist
+  # SemanticKITTI category ontology, used by the category head/loss.
+  # category 0 is "unlabeled" and ignored.
+  categories:
+    1: {name: "vehicle",   classes: [1, 2, 3, 4, 5]}
+    2: {name: "human",     classes: [6, 7, 8]}
+    3: {name: "ground",    classes: [9, 10, 11, 12]}
+    4: {name: "structure", classes: [13]}
+    5: {name: "object",    classes: [14, 18, 19]}  # fence, pole, traffic-sign
+    6: {name: "nature",    classes: [15, 16, 17]}
+
+################################################################################
+# sensor / projection
+################################################################################
+sensor:
+  fov_up: 3
+  fov_down: -25
+  height: 64
+  width: 2048          # 1024 is a good compromise on a 6 GB GPU
+  img_means: [12.12, 10.88, 0.23, -1.04, 0.21]  # range, x, y, z, remission
+  img_stds: [12.32, 11.47, 6.91, 0.86, 0.16]
+
+################################################################################
+# model
+################################################################################
+model:
+  backbone:
+    layers: 53         # darknet 21 or 53
+    OS: 32             # output stride (horizontal only)
+    dropout: 0.01
+    bn_d: 0.01
+    input_depth: {range: true, xyz: true, remission: true}
+  decoder:
+    upsample: "trilinear"     # "trilinear" (paper) or "transpose" (RangeNet++)
+    channels: [512, 256, 128, 64, 32]
+    trilinear_rows: 3         # candidate rows around each fine pixel
+    trilinear_k: 4            # closest candidates used (paper: 4)
+    dropout: 0.01
+    bn_d: 0.01
+  embedding_dim: 32
+  # RangeNet++ semantic model directory (contains "backbone"), or null.
+  pretrained: null
+
+################################################################################
+# losses (paper: plain sum of all terms)
+################################################################################
+loss:
+  w_sem: 1.0
+  w_cat: 1.0
+  w_center: 1.0
+  w_center_err: 1.0
+  w_attract: 1.0
+  w_repel: 1.0
+  w_embed_err: 1.0
+  # Eq. 6 is 1/d^2; delta keeps it bounded while embeddings are collapsed.
+  repel_delta: 1.0
+  # class weights w_c = 1 / ln(class_weight_c + f_c)  (Eq. 4, ENet style)
+  class_weight_c: 1.02
+
+################################################################################
+# instance extraction
+################################################################################
+cluster:
+  features: "both"       # "center", "embedding" or "both" (paper best: both)
+  learned_radius: true   # false: use fixed radii below
+  # "seed": join if within the seed's radius (paper). "sum": within seed +
+  # candidate radius; two noisy centres with errors e1, e2 can be e1 + e2
+  # apart, and "seed" fragmented objects badly in our tests.
+  radius_mode: "sum"
+  fixed_center_radius: 0.5      # metres
+  fixed_embedding_radius: 0.5
+  # learned radii are multiplied by (val error / train error), estimated
+  # during training; set to a number to override.
+  radius_scale: "auto"
+  min_points: 1          # drop clusters smaller than this (stays thing class)
+
+################################################################################
+# training (paper: Adam 1e-4, 1 epoch warmup, x0.99 per epoch, 200 epochs)
+################################################################################
+train:
+  data_root: "/path/to/semantic-kitti/dataset"   # contains sequences/
+  split: {train: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10], valid: [8], test: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]}
+  epochs: 200
+  batch_size: 4
+  accumulate: 2          # effective batch = batch_size * accumulate
+  lr: 1.0e-4
+  betas: [0.9, 0.99]
+  weight_decay: 0.0
+  warmup_epochs: 1
+  lr_decay: 0.99         # per epoch, after warmup
+  grad_clip: 10.0
+  amp: "bf16"            # "bf16" (Ampere+), "fp16" or "none"
+  compile: false         # torch.compile the model
+  workers: 6
+  freeze_backbone_epochs: 0   # >0 when starting from pretrained weights
+  freeze_backbone_bn: false   # keep backbone BN stats fixed (small batches)
+  augment:
+    rotate: true         # random yaw rotation
+    flip: true           # random mirror across the x axis
+    scale: [0.95, 1.05]
+  val_every: 1
+  val_max_scans: 500     # subsample validation for speed (null = all)
+  log_every: 50
+  seed: 1
