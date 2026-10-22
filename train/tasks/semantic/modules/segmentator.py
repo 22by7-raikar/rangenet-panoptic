@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # This file is covered by the LICENSE file in the root of this project.
 
-import imp
+from common.module_loader import load_source
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,7 +19,7 @@ class Segmentator(nn.Module):
     self.strict = False
 
     # get the model
-    bboneModule = imp.load_source("bboneModule",
+    bboneModule = load_source("bboneModule",
                                   booger.TRAIN_PATH + '/backbones/' +
                                   self.ARCH["backbone"]["name"] + '.py')
     self.backbone = bboneModule.Backbone(params=self.ARCH["backbone"])
@@ -35,7 +35,7 @@ class Segmentator(nn.Module):
       self.backbone.cuda()
     _, stub_skips = self.backbone(stub)
 
-    decoderModule = imp.load_source("decoderModule",
+    decoderModule = load_source("decoderModule",
                                     booger.TRAIN_PATH + '/tasks/semantic/decoders/' +
                                     self.ARCH["decoder"]["name"] + '.py')
     self.decoder = decoderModule.Decoder(params=self.ARCH["decoder"],

@@ -1,0 +1,48 @@
+// System overview: data, shared range-image stack, the two tasks, outputs.
+digraph system {
+  graph [rankdir=TB, bgcolor="white", pad=0.3, nodesep=0.4, ranksep=0.45,
+         fontname="Helvetica", fontsize=12, labeljust=l, compound=true, newrank=true];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.18,0.08"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=9, arrowsize=0.7];
+
+  subgraph cluster_data {
+    label="SemanticKITTI  sequences/XX/"; style="rounded,dashed"; color="#9aa7b5";
+    scans  [label="velodyne/*.bin\nx, y, z, remission", shape=cylinder, fillcolor="#e8eef7"];
+    labels [label="labels/*.label\nsemantic | instance << 16", shape=cylinder, fillcolor="#e8eef7"];
+  }
+
+  subgraph cluster_shared {
+    label="Shared range-image stack   train/common, train/backbones"; style="rounded,filled"; color="#3d6fb6"; fillcolor="#f7faff";
+    proj [label="Spherical projection\n5 x H x W range image"];
+    bb   [label="Darknet 21 / 53 encoder\nhorizontal stride 32, skips"];
+    proj -> bb;
+  }
+
+  subgraph cluster_sem {
+    label="Semantic task   train/tasks/semantic\nRangeNet++ (IROS 2019)"; style="rounded,filled"; color="#4c956c"; fillcolor="#f5fbf7";
+    semdec [label="Transposed-conv decoder\n+ class head"];
+    knn    [label="kNN / CRF post-processing"];
+    semdec -> knn;
+  }
+
+  subgraph cluster_pan {
+    label="Panoptic task   train/tasks/panoptic\nLPSAD (IROS 2020)"; style="rounded,filled"; color="#c8553d"; fillcolor="#fff8f5";
+    dec2  [label="Semantic + instance decoders\ndistance-aware trilinear upsampling"];
+    heads [label="Heads: classes, categories,\nembedding, 3D offsets, radii"];
+    clus  [label="Instance extractor\n(seeded clustering)"];
+    dec2 -> heads -> clus;
+  }
+
+  out  [label="predictions/*.label  (benchmark format)", shape=note, fillcolor="#fff7e0", color="#b08900"];
+  eval [label="Evaluation:  mIoU  |  PQ, RQ, SQ, PQ-dagger\nsemantic-kitti-api compatible", fillcolor="#fff7e0", color="#b08900"];
+
+  scans -> proj;
+  labels -> proj [style=dashed, label=" training targets"];
+  bb -> semdec;
+  bb -> dec2;
+  knn -> out;
+  clus -> out;
+  out -> eval;
+  {rank=same; semdec; dec2}
+}

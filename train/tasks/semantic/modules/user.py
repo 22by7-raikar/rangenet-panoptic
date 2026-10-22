@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
-import imp
+from common.module_loader import load_source
 import yaml
 import time
 from PIL import Image
@@ -31,7 +31,7 @@ class User():
     self.modeldir = modeldir
 
     # get the data
-    parserModule = imp.load_source("parserModule",
+    parserModule = load_source("parserModule",
                                    booger.TRAIN_PATH + '/tasks/semantic/dataset/' +
                                    self.DATA["name"] + '/parser.py')
     self.parser = parserModule.Parser(root=self.datadir,

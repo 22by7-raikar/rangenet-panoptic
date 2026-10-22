@@ -43,6 +43,7 @@ def _lut(mapping: dict, size: int | None = None) -> np.ndarray:
 
 
 def load_config(path: str | Path) -> dict:
+    """Read a task config and the label config it references (``labels``)."""
     path = Path(path).resolve()
     with open(path) as f:
         cfg = yaml.safe_load(f)
@@ -56,6 +57,7 @@ def load_config(path: str | Path) -> dict:
 
 
 def build_label_space(cfg: dict) -> LabelSpace:
+    """Derive class maps, frequencies, things and categories from a config."""
     lab = cfg["label_cfg"]
     inv = lab["learning_map_inv"]
     nclasses = len(inv)

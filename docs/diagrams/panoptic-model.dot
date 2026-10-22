@@ -1,0 +1,49 @@
+// LPSAD network (train/tasks/panoptic/lpsad/model.py)
+digraph model {
+  graph [rankdir=TB, bgcolor="white", pad=0.3, nodesep=0.3, ranksep=0.4,
+         fontname="Helvetica", fontsize=12, labeljust=l, compound=true, newrank=true];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.15,0.06"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=9, arrowsize=0.6];
+
+  input [label="input  5 x H x W\n(range, x, y, z, remission)", shape=parallelogram, fillcolor="#e8eef7"];
+  xyz   [label="xyz 3 x H x W, mask", shape=parallelogram, fillcolor="#e8eef7"];
+
+  subgraph cluster_enc {
+    label="DarknetBackbone   (RangeNet++ weights load as-is; skips stay attached)"; style="rounded,filled"; color="#3d6fb6"; fillcolor="#f7faff";
+    e1 [label="OS 1\n32 ch"]; e2 [label="OS 2\n64"]; e4 [label="OS 4\n128"];
+    e8 [label="OS 8\n256"]; e16 [label="OS 16\n512"]; e32 [label="OS 32\n1024", fillcolor="#dbe7f8"];
+    e1 -> e2 -> e4 -> e8 -> e16 -> e32;
+    {rank=same; e1; e2; e4; e8; e16; e32}
+  }
+  pyr [label="point_pyramid()\nxyz at each stride\n(points at kernel centres)", fillcolor="#eef5ff", color="#3d6fb6"];
+
+  subgraph cluster_sdec {
+    label="Semantic decoder"; style="rounded,filled"; color="#4c956c"; fillcolor="#f5fbf7";
+    s5  [label="5 x DecoderStage\nTrilinearUpsample x2 -> concat skip\n-> conv-bn-relu -> residual block"];
+    emb [label="embedding  32 x H x W"];
+    s5 -> emb;
+  }
+  subgraph cluster_idec {
+    label="Instance decoder"; style="rounded,filled"; color="#c8553d"; fillcolor="#fff8f5";
+    i5 [label="5 x DecoderStage\nsame structure, own weights"];
+  }
+
+  cls  [label="class_head\n20 classes"];
+  cat  [label="category_head\n7 categories"];
+  eerr [label="embedding_err\nradius (Eq. 7)"];
+  off  [label="offset_head\n3D offset to centre (Eq. 2)"];
+  oerr [label="offset_err\nradius (Eq. 3)"];
+
+  input -> e1;
+  xyz -> pyr;
+  e32 -> s5 [label=" features"];
+  e32 -> i5 [label=" features"];
+  e8 -> s5 [ltail=cluster_enc, style=dotted, label=" skips OS 1-16"];
+  e8 -> i5 [ltail=cluster_enc, style=dotted];
+  pyr -> s5 [style=dashed, label=" 3D geometry"];
+  pyr -> i5 [style=dashed];
+  emb -> cls; emb -> cat; s5 -> eerr;
+  i5 -> off; i5 -> oerr;
+  {rank=same; s5; i5}
+}

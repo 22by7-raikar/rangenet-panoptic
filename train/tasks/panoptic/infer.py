@@ -8,7 +8,7 @@ Clustering settings can be changed per run (paper Table IV ablations):
 
     python infer.py ... --cluster features=center learned_radius=false
 
-Labels go to <out>/sequences/XX/predictions/NNNNNN.label as
+Labels go to OUT/sequences/XX/predictions/NNNNNN.label as
 ``semantic_id | (instance_id << 16)``, the format of the official benchmark
 and semantic-kitti-api.
 """
@@ -80,7 +80,7 @@ def main():
             if device.type == "cuda":
                 torch.cuda.synchronize()
             times.append((time.time() - start) / len(preds))
-            for (sem, inst), seq, name in zip(preds, batch["seq"], batch["name"]):
+            for (sem, inst), seq, name in zip(preds, batch["seq"], batch["name"], strict=True):
                 label = inverse[sem] | (inst << 16)
                 path = out_root / seq / "predictions" / f"{name}.label"
                 path.parent.mkdir(parents=True, exist_ok=True)

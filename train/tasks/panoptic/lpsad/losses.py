@@ -31,6 +31,13 @@ def segment_mean(values, index, n):
 
 
 class LPSADLoss(nn.Module):
+    """Weighted sum of all LPSAD losses.
+
+    Terms: ``sem`` (Eq. 4), ``cat``, ``center`` (Eq. 2), ``center_err``
+    (Eq. 3), ``attract`` and ``repel`` (Eqs. 5-6, within each scan),
+    ``embed_err`` (Eq. 7). Weights come from ``cfg["loss"]``.
+    """
+
     def __init__(self, cfg: dict, labels: LabelSpace):
         super().__init__()
         self.w = cfg["loss"]
@@ -41,6 +48,14 @@ class LPSADLoss(nn.Module):
         self.register_buffer("cat_w", frequency_weights(cat_content, c, [0]))
 
     def forward(self, out: dict, batch: dict):
+        """Compute the losses for one batch.
+
+        @param out    outputs of LPSAD.forward()
+        @param batch  collated batch with ground truth
+        @return (total loss, {term: detached value}, stats) where stats holds
+                the mean offset and embedding errors when the batch has
+                instances (used for the radius scale)
+        """
         mask = batch["mask"]
         terms = {
             "sem": weighted_ce(out["logits"], batch["sem"], self.class_w),
@@ -77,7 +92,8 @@ class LPSADLoss(nn.Module):
             d_in = ((emb - mean_emb[idx]) ** 2).sum(1)
             terms["attract"] = segment_mean(d_in, idx, n).mean()
             d_between = torch.cdist(mean_emb, mean_emb) ** 2
-            pairs = (scan_of[:, None] == scan_of[None, :]) & ~torch.eye(n, dtype=torch.bool, device=idx.device)
+            same_scan = scan_of[:, None] == scan_of[None, :]
+            pairs = same_scan & ~torch.eye(n, dtype=torch.bool, device=idx.device)
             if pairs.any():
                 terms["repel"] = (1.0 / (d_between[pairs] + self.w["repel_delta"])).mean()
             else:

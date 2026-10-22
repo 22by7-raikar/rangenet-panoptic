@@ -41,6 +41,16 @@ def to_device(batch, device):
 
 
 class Trainer:
+    """Owns model, data, optimiser and checkpoints for one training run.
+
+    See docs/architecture.md, "training".
+
+    @param cfg     full configuration
+    @param labels  label space from build_label_space()
+    @param logdir  directory for checkpoints and TensorBoard logs
+    @param resume  checkpoint to resume from, or None
+    """
+
     def __init__(self, cfg: dict, labels: LabelSpace, logdir: str | Path,
                  resume: str | Path | None = None):
         self.cfg = cfg
@@ -128,6 +138,7 @@ class Trainer:
 
     # --------------------------------------------------------------- train
     def train_epoch(self):
+        """One pass over the training set; returns mean loss terms and errors."""
         self.model.train()
         frozen = self.epoch < self.t["freeze_backbone_epochs"]
         self.model.set_backbone_trainable(not frozen)
@@ -176,6 +187,12 @@ class Trainer:
     # ------------------------------------------------------------ validate
     @torch.no_grad()
     def validate(self, train_errors: dict | None = None):
+        """Validation losses and panoptic metrics; updates the radius scale.
+
+        @param train_errors  mean train errors from train_epoch(), for the
+                             radius scale (val error / train error)
+        @return metrics from PanopticEval.results() plus ``loss_*`` terms
+        """
         self.model.eval()
         ev = PanopticEval(self.labels.nclasses, self.labels.ignore, self.labels.things)
         sums, n, err_sum, err_n = {}, 0, np.zeros(2), 0
@@ -196,7 +213,8 @@ class Trainer:
                 err_n += 1
             preds = panoptic_inference(out, batch, self.is_thing, self.cfg["cluster"],
                                        self.radius_scale, gen)
-            for (sem, inst), gs, gi in zip(preds, batch["point_sem"], batch["point_inst"]):
+            truth = zip(batch["point_sem"], batch["point_inst"], strict=True)
+            for (sem, inst), (gs, gi) in zip(preds, truth, strict=True):
                 ev.add(sem.cpu().numpy(), inst.cpu().numpy(), gs.numpy(), gi.numpy())
 
         val_err = err_sum / max(err_n, 1)
@@ -215,6 +233,7 @@ class Trainer:
 
     # ----------------------------------------------------------------- fit
     def fit(self):
+        """Train until ``train.epochs``, validating every ``val_every`` epochs."""
         while self.epoch < self.t["epochs"]:
             train = self.train_epoch()
             self.log("train", train, self.epoch)

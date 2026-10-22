@@ -12,6 +12,14 @@ import numpy as np
 
 
 class PanopticEval:
+    """Accumulates point-level panoptic and semantic statistics over scans.
+
+    @param n_classes   number of classes
+    @param ignore      classes ignored in ground truth (dropped)
+    @param things      thing classes, for the thing / stuff split
+    @param min_points  unmatched segments smaller than this are not counted
+    """
+
     def __init__(self, n_classes: int, ignore: list[int], things: list[int],
                  min_points: int = 50, offset: int = 2 ** 32):
         self.n = n_classes
@@ -31,6 +39,7 @@ class PanopticEval:
         self.iou_sum = np.zeros(self.n, dtype=np.float64)
 
     def add(self, pred_sem, pred_inst, gt_sem, gt_inst):
+        """Add one scan: per-point class and instance ids, predicted and true."""
         pred_sem = np.asarray(pred_sem, dtype=np.int64)
         gt_sem = np.asarray(gt_sem, dtype=np.int64)
         np.add.at(self.conf, (pred_sem, gt_sem), 1)
@@ -76,6 +85,8 @@ class PanopticEval:
         return tp / np.maximum(tp + fp + fn, 1e-15)
 
     def results(self) -> dict:
+        """PQ, PQ_dagger, SQ, RQ (all, things ``_th``, stuff ``_st``), mIoU,
+        and ``per_class`` arrays."""
         eps = 1e-15
         sq = self.iou_sum / np.maximum(self.tp, eps)
         rq = self.tp / np.maximum(self.tp + 0.5 * self.fp + 0.5 * self.fn, eps)

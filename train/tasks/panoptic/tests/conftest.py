@@ -7,8 +7,9 @@ PANOPTIC = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PANOPTIC))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from lpsad.config import build_label_space, load_config  # noqa: E402
 from synthetic import write_dataset  # noqa: E402
+
+from lpsad.config import build_label_space, load_config  # noqa: E402
 
 
 @pytest.fixture

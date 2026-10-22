@@ -5,8 +5,8 @@ import sys
 
 import numpy as np
 import torch
-
 from conftest import PANOPTIC
+
 from lpsad.trainer import Trainer
 
 

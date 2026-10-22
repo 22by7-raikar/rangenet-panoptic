@@ -115,24 +115,6 @@ With k-NN processing:
 
 ## Citations
 
-If you use our framework, model, or predictions for any academic work, please cite the original [paper](http://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/milioto2019iros.pdf), and the [dataset](http://semantic-kitti.org).
-
-```
-@inproceedings{milioto2019iros,
-  author    = {A. Milioto and I. Vizzo and J. Behley and C. Stachniss},
-  title     = {{RangeNet++: Fast and Accurate LiDAR Semantic Segmentation}},
-  booktitle = {IEEE/RSJ Intl.~Conf.~on Intelligent Robots and Systems (IROS)},
-  year      = 2019,
-  codeurl   = {https://github.com/PRBonn/lidar-bonnetal},
-  videourl  = {https://youtu.be/wuokg7MFZyU},
-}
-```
-
-```
-@inproceedings{behley2019iccv,
-  author    = {J. Behley and M. Garbade and A. Milioto and J. Quenzel and S. Behnke and C. Stachniss and J. Gall},
-  title     = {{SemanticKITTI: A Dataset for Semantic Scene Understanding of LiDAR Sequences}},
-  booktitle = {Proc. of the IEEE/CVF International Conf.~on Computer Vision (ICCV)},
-  year      = {2019}
-}
-```
+If you use this framework, models or predictions in academic work, please cite
+RangeNet++ and SemanticKITTI; the BibTeX entries are in the
+[top-level README](../../../README.md#credits-license-and-citations).

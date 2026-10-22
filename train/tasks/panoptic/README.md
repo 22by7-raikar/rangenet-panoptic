@@ -9,6 +9,9 @@ on the RangeNet++ Darknet backbones of this repository. The paper's code was
 never released; this follows the paper's equations and ablations on a
 modern PyTorch 2.x training stack.
 
+Design documentation: [architecture](../../../docs/architecture.md) (diagrams of
+every subsystem) and [design decisions](../../../docs/design-decisions.md).
+
 ## Method
 
 | Paper | Here |

@@ -99,5 +99,5 @@ def test_rangenet_backbone_checkpoint_loads(cfg, labels, tmp_path):
     torch.save(model.backbone.state_dict(), tmp_path / "backbone")
     other = LPSAD(cfg, labels.nclasses, labels.ncategories)
     other.load_rangenet_backbone(tmp_path)
-    for a, b in zip(model.backbone.parameters(), other.backbone.parameters()):
+    for a, b in zip(model.backbone.parameters(), other.backbone.parameters(), strict=True):
         assert torch.equal(a, b)

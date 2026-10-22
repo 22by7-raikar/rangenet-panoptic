@@ -84,6 +84,24 @@ def instance_targets(xyz: np.ndarray, raw_label: np.ndarray, sem: np.ndarray,
 
 
 class SemanticKittiPanoptic(Dataset):
+    """SemanticKITTI scans as range images with panoptic targets.
+
+    Each item is a dict. Image tensors (H x W): ``input`` (5, normalised),
+    ``xyz`` (3, metres), ``mask``, and with ground truth ``sem``, ``cat``,
+    ``inst`` (0 = none) and ``offset`` (3, x - centre). Per-point tensors in
+    the original point order: ``px``, ``py`` and, with ground truth,
+    ``point_sem`` and ``point_inst``. Also ``seq`` and ``name`` of the scan.
+    See docs/architecture.md, "data pipeline".
+
+    @param root       dataset root containing ``sequences/``
+    @param sequences  sequence numbers to load
+    @param cfg        full configuration; uses ``cfg["sensor"]``
+    @param labels     label space from build_label_space()
+    @param gt         load labels and build targets
+    @param augment    point cloud augmentation, or None
+    @param max_scans  evenly spaced subset of at most this many scans
+    """
+
     def __init__(self, root: str | Path, sequences: list[int], cfg: dict,
                  labels: LabelSpace, gt: bool = True,
                  augment: Augment | None = None, max_scans: int | None = None):
