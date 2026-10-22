@@ -1,0 +1,20 @@
+// TrilinearUpsample (train/tasks/panoptic/lpsad/model.py)
+digraph trilinear {
+  graph [rankdir=LR, bgcolor="white", pad=0.3, nodesep=0.3, ranksep=0.4,
+         fontname="Helvetica", fontsize=12, labeljust=l];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.15,0.06"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=8, arrowsize=0.6];
+
+  fine   [label="fine pixel (h, w)\nwith 3D point x_f", shape=parallelogram, fillcolor="#e8eef7"];
+  cands  [label="6 candidates\nrows h-1, h, h+1\ncolumns floor(w/2), floor(w/2)+1\n(wraps at 360 degrees)"];
+  dist   [label="3D distance\n|x_f - x_c|\nempty coarse pixel: inf"];
+  topk   [label="keep the 4\nclosest"];
+  wts    [label="w_i = 1 / (d_i + eps)\nnormalised to sum 1"];
+  fb     [label="fallback: nearest\n(empty fine pixel or\nno valid candidate)", fillcolor="#fff7e0", color="#b08900"];
+  out    [label="feature = sum_i w_i * f_i\nno learned weights,\nno gradient through w", fillcolor="#f5fbf7", color="#4c956c"];
+
+  fine -> cands -> dist -> topk -> wts -> out;
+  dist -> fb [style=dashed];
+  fb -> out [style=dashed];
+}

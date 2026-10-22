@@ -1,0 +1,31 @@
+// infer.py -> evaluate.py (lpsad/cluster.py, lpsad/metrics.py)
+digraph inference {
+  graph [rankdir=LR, bgcolor="white", pad=0.3, nodesep=0.3, ranksep=0.4,
+         fontname="Helvetica", fontsize=12, labeljust=l];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.15,0.06"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=8, arrowsize=0.6];
+
+  ck  [label="best.pt\nweights, config,\nradius_scale", shape=note, fillcolor="#fff7e0", color="#b08900"];
+  net [label="LPSAD forward"];
+  am  [label="argmax\nsemantic class per pixel"];
+
+  subgraph cluster_ex {
+    label="extract_instances()  per scan"; style="rounded,filled"; color="#c8553d"; fillcolor="#fff8f5";
+    th  [label="thing pixels\n(predicted class 1..8)"];
+    sd  [label="pick random\nunassigned seed"];
+    mb  [label="members: same class and\n|c_p - c_s| <= r_s (+ r_p)\n|e_p - e_s| <= r_s (+ r_p)"];
+    as  [label="new instance id\nremove members"];
+    th -> sd -> mb -> as;
+    as -> sd [label="until none left", style=dashed];
+  }
+  up  [label="unproject via (u, v)\nlabels for every point"];
+  lbl [label="sem | inst << 16\n.label files", shape=note, fillcolor="#fff7e0", color="#b08900"];
+  ev  [label="evaluate.py | official\nsemantic-kitti-api"];
+
+  ck -> net -> am -> th;
+  net -> mb [label="offsets, embeddings, radii", style=dashed];
+  as -> up;
+  am -> up [style=dashed, label="stuff"];
+  up -> lbl -> ev;
+}

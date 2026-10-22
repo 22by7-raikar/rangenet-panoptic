@@ -105,7 +105,8 @@ def test_radius_mode_sum_uses_both_radii():
     xyz = torch.zeros(3, H, W)
     centers = torch.zeros(3, H, W)
     centers[0, 0, ::2], centers[0, 0, 1::2] = 0.4, -0.4
-    args = (sem, torch.ones(H, W, dtype=torch.bool), torch.arange(20).lt(9) & torch.arange(20).gt(0),
+    is_thing = torch.arange(20).lt(9) & torch.arange(20).gt(0)
+    args = (sem, torch.ones(H, W, dtype=torch.bool), is_thing,
             xyz, xyz - centers, torch.full((1, H, W), 0.5), torch.zeros(4, H, W),
             torch.full((1, H, W), 0.5))
     seed = extract_instances(*args, features="center", radius_mode="seed",

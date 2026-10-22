@@ -1,94 +1,181 @@
-> [!IMPORTANT]
-> **Repository Archived**  
-> This repository has been archived and is no longer actively maintained. You are welcome to explore the code, but please note that no further updates, issues, or pull requests will be accepted.
->
-> Thank you for your interest and contributions.
+# RangeNet Panoptic
 
-# LiDAR-Bonnetal
+Panoptic segmentation of LiDAR scans on range images. This repository extends
+[RangeNet++](https://github.com/PRBonn/lidar-bonnetal) (LiDAR-Bonnetal, Milioto
+et al., IROS 2019) from semantic to **panoptic** segmentation with a modern
+PyTorch 2 re-implementation of **LPSAD** (Milioto et al., *LiDAR Panoptic
+Segmentation for Autonomous Driving*, IROS 2020). LPSAD is the panoptic model the
+original authors built on this codebase but never released.
 
-Semantic Segmentation of point clouds using range images.
+Every point of a scan gets a semantic class (road, car, person, ...) and, for
+countable *things* such as cars and people, an instance id.
 
-Developed by [Andres Milioto](http://www.ipb.uni-bonn.de/people/andres-milioto/), [Jens Behley](http://www.ipb.uni-bonn.de/people/jens-behley/), [Ignacio Vizzo](http://www.ipb.uni-bonn.de/people/ignacio-vizzo/), and [Cyrill Stachniss](http://www.ipb.uni-bonn.de/people/cyrill-stachniss/)
+## Why this project exists
 
-_Examples of segmentation results from [SemanticKITTI](http://semantic-kitti.org) dataset:_
-![ptcl](pics/semantic-ptcl.gif)
-![ptcl](pics/semantic-proj.gif)
+RangeNet++ is a fast and widely used LiDAR semantic segmentation framework. It
+projects each scan to a 2D range image and segments it with a 2D CNN, fast
+enough for a robot or an embedded GPU. Semantic labels alone don't separate
+two parked cars or a group of pedestrians, though, and most driving tasks need
+that.
 
-## Description
+The upstream repository announced panoptic segmentation as "Coming Soon"
+and was then archived with the folder still empty. The same authors published
+the design they had in mind, LPSAD (IROS 2020). It keeps the RangeNet++ encoder,
+adds an instance decoder that regresses 3D offsets to object centres, and
+clusters points with learned radii. The paper says the code would be released
+in LiDAR-Bonnetal, but it never was, and no third-party implementation exists.
 
-This code provides code to train and deploy Semantic Segmentation of LiDAR scans, using range images as intermediate representation. The training pipeline can be found in [/train](train/). We will open-source the deployment pipeline soon.
+This project started as an extension of RangeNet++ semantic training to
+panoptic segmentation, with three requirements:
 
-## Pre-trained Models
+- **Build on the authors' intended design**, not an ad-hoc head. Their design
+  reuses everything RangeNet++ already does well, and their paper gives
+  equations, ablations and target numbers to check against.
+- **Don't be outdated.** The 2019 stack (PyTorch 1.1, TensorFlow 1.13,
+  Python's removed `imp` module) no longer installs. The code targets PyTorch 2
+  with mixed precision, and the docs say plainly where range-view methods stand
+  against current point-based methods.
+- **Train on a laptop.** The target machine has a 6 GB RTX 3060 laptop GPU,
+  hence bf16, gradient accumulation and initialising from RangeNet++ weights.
 
-### [SemanticKITTI](http://semantic-kitti.org)
+## What is in the repository
 
-- [squeezeseg](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezeseg.tar.gz)
-- [squeezeseg + crf](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezeseg-crf.tar.gz)
-- [squeezesegV2](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezesegV2.tar.gz)
-- [squeezesegV2 + crf](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezesegV2-crf.tar.gz)
-- [darknet21](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet21.tar.gz)
-- [darknet53](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53.tar.gz)
-- [darknet53-1024](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53-1024.tar.gz)
-- [darknet53-512](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53-512.tar.gz)
+| Task | Model | Status |
+|---|---|---|
+| [Semantic](train/tasks/semantic) | RangeNet++ (SqueezeSeg, SqueezeSegV2, Darknet 21/53), kNN / CRF post-processing | Upstream code, ported to Python 3.12+, NumPy 2 and PyTorch 2. Train, infer and evaluate verified on CPU. |
+| [Panoptic](train/tasks/panoptic) | LPSAD: shared Darknet encoder, semantic and instance decoders, trilinear upsampling, learned-radius clustering | New. Tested on synthetic scans; **not yet trained on SemanticKITTI**. |
 
-To enable kNN post-processing, just change the boolean value to `True` in the `arch_cfg.yaml` file parameter, inside the model directory.
-  
-## Predictions from Models
+![System overview](docs/diagrams/system.svg)
 
-### [SemanticKITTI](http://semantic-kitti.org)
+## Quick start
 
-These are the predictions for the train, validation, and test sets. The performance can be evaluated for the training and validation set, but for test set evaluation a submission to the benchmark needs to be made (labels are not public).
+```sh
+git clone https://github.com/22by7-raikar/rangenet-panoptic && cd rangenet-panoptic
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+```
 
-No post-processing:
-- [squeezeseg](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezeseg.tar.gz)
-- [squeezeseg + crf](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezeseg-crf.tar.gz)
-- [squeezesegV2](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezesegV2.tar.gz)
-- [squeezesegV2 + crf](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezesegV2-crf.tar.gz)
-- [darknet21](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet21.tar.gz)
-- [darknet53](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53.tar.gz)
-- [darknet53-1024](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53-1024.tar.gz)
-- [darknet53-512](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53-512.tar.gz)
+Get [SemanticKITTI](http://semantic-kitti.org/dataset.html) (the KITTI odometry
+velodyne scans plus labels) into `/data/semantic-kitti/sequences/00..21`.
 
-With k-NN processing:
-- [squeezeseg](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezeseg-knn.tar.gz)
-- [squeezesegV2](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/squeezesegV2-knn.tar.gz)
-- [darknet53](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53-knn.tar.gz)
-- [darknet21](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet21-knn.tar.gz)
-- [darknet53-1024](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53-1024-knn.tar.gz)
-- [darknet53-512](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/predictions/darknet53-512-knn.tar.gz)
+**Panoptic (LPSAD)**, see [its README](train/tasks/panoptic/README.md):
 
-## License
+```sh
+cd train/tasks/panoptic
+python -m pytest tests                      # about 2 min on CPU
+python train.py -d /data/semantic-kitti -l logs/lpsad -p /models/darknet53 \
+    --set sensor.width=1024 train.batch_size=2 train.accumulate=4 \
+          train.freeze_backbone_epochs=10 train.freeze_backbone_bn=true
+python infer.py -m logs/lpsad/best.pt -d /data/semantic-kitti -o preds --split valid
+python evaluate.py -d /data/semantic-kitti -p preds --split valid
+```
 
-### LiDAR-Bonnetal: MIT
+**Semantic (RangeNet++)**, see [its README](train/tasks/semantic/README.md):
 
-Copyright 2019, Andres Milioto, Jens Behley, Cyrill Stachniss. University of Bonn.
+```sh
+cd train/tasks/semantic
+python train.py -d /data/semantic-kitti -ac config/arch/darknet53.yaml -l logs/darknet53
+python infer.py -d /data/semantic-kitti -l preds -m logs/darknet53
+python evaluate_iou.py -d /data/semantic-kitti -p preds --split valid
+```
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+## Status and roadmap
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+Verified so far, on CPU with synthetic scans:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+- The panoptic pipeline runs end to end (train, resume, infer, evaluate), and
+  the model overfits a small set: car PQ 0.41 and person PQ 0.80.
+- The semantic pipeline runs end to end on PyTorch 2.14 / Python 3.13.
+- The panoptic model loads backbone weights written by the semantic trainer.
 
-### Pretrained models: Model and Dataset Dependent
+Next:
 
-The pretrained models with a specific dataset maintain the copyright of such dataset.
+1. Train on SemanticKITTI on the 6 GB GPU. Check memory at 64 x 1024, that the
+   2019 RangeNet++ checkpoint files load, and clustering speed.
+2. Reproduce the paper's validation ablations (Tables III and IV) and fill in
+   the [results table](train/tasks/panoptic/README.md#reference-results-paper-semantickitti).
+3. If clustering is a bottleneck, vectorise the seed loop.
+4. Optional: a query-based mask head, or 4D panoptic (tracking), on the same
+   data pipeline.
 
-## Citations
+For context: published LiDAR-only point-based methods reach about 65 PQ on the
+SemanticKITTI test set (P3Former, 2023), against 38 PQ for LPSAD. Range-view
+models trade accuracy for speed and simple 2D deployment. The goal here is a
+faithful, fast, modern baseline, not the state of the art.
 
-If you use our framework, model, or predictions for any academic work, please cite the original [paper](http://www.ipb.uni-bonn.de/wp-content/papercite-data/pdf/milioto2019iros.pdf), and the [dataset](http://semantic-kitti.org).
+## Documentation
+
+| | |
+|---|---|
+| [Architecture](docs/architecture.md) | System and subsystem design with diagrams |
+| [Design decisions](docs/design-decisions.md) | Why things are the way they are, including every deviation from the paper |
+| [Development](docs/development.md) | Setup, tests, docs build, CI, conventions |
+| [Panoptic task](train/tasks/panoptic/README.md) | Usage, configuration, reference results |
+| [Semantic task](train/tasks/semantic/README.md) | Upstream RangeNet++ usage |
+| API reference | `doxygen Doxyfile`, then open `docs/_build/html/index.html` (also built by CI) |
+
+## Repository layout
 
 ```
+.
+├── README.md                    this file (also the Doxygen main page)
+├── Doxyfile                     API reference configuration
+├── docs/                        architecture, design decisions, development
+│   └── diagrams/                Graphviz sources (*.dot) and rendered *.svg
+├── requirements.txt
+└── train/
+    ├── backbones/               SqueezeSeg, SqueezeSegV2, Darknet encoders (shared)
+    ├── common/                  laser scan I/O and projection, logging, utilities
+    └── tasks/
+        ├── semantic/            RangeNet++ (upstream, ported)
+        └── panoptic/            LPSAD
+            ├── lpsad/           config, dataset, model, losses, cluster, metrics, trainer
+            ├── config/          lpsad-darknet53.yaml
+            ├── tests/           unit + end-to-end tests on synthetic scans
+            └── train.py, infer.py, evaluate.py
+```
+
+## Pre-trained RangeNet++ models
+
+The upstream semantic models can initialise the panoptic encoder (`-p`). They
+are hosted by the University of Bonn:
+[darknet21](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet21.tar.gz),
+[darknet53](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53.tar.gz),
+[darknet53-1024](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53-1024.tar.gz),
+[darknet53-512](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/darknet53-512.tar.gz),
+[squeezeseg](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezeseg.tar.gz),
+[squeezesegV2](http://www.ipb.uni-bonn.de/html/projects/bonnetal/lidar/semantic/models/squeezesegV2.tar.gz)
+(add `-crf` before `.tar.gz` for the CRF variants). Predictions for every split
+are available under the same path with `predictions/` instead of `models/`.
+To enable kNN post-processing for a semantic model, set `post: KNN: use: True`
+in its `arch_cfg.yaml`.
+
+## Credits, license and citations
+
+Forked from [PRBonn/lidar-bonnetal](https://github.com/PRBonn/lidar-bonnetal)
+by Andres Milioto, Jens Behley, Ignacio Vizzo and Cyrill Stachniss (University
+of Bonn), under the MIT license, which this repository keeps (see
+[LICENSE](LICENSE)). The panoptic method is theirs too; the implementation here
+is independent. Pre-trained models keep the license of the dataset they were
+trained on.
+
+If you use this work, please cite the original papers and the dataset:
+
+```bibtex
+@inproceedings{milioto2020iros,
+  author    = {A. Milioto and J. Behley and C. McCool and C. Stachniss},
+  title     = {{LiDAR Panoptic Segmentation for Autonomous Driving}},
+  booktitle = {IEEE/RSJ Intl.~Conf.~on Intelligent Robots and Systems (IROS)},
+  year      = {2020}
+}
+
 @inproceedings{milioto2019iros,
   author    = {A. Milioto and I. Vizzo and J. Behley and C. Stachniss},
   title     = {{RangeNet++: Fast and Accurate LiDAR Semantic Segmentation}},
   booktitle = {IEEE/RSJ Intl.~Conf.~on Intelligent Robots and Systems (IROS)},
-  year      = 2019,
-  codeurl   = {https://github.com/PRBonn/lidar-bonnetal},
-  videourl  = {https://youtu.be/wuokg7MFZyU},
+  year      = {2019}
 }
-```
 
-```
 @inproceedings{behley2019iccv,
   author    = {J. Behley and M. Garbade and A. Milioto and J. Quenzel and S. Behnke and C. Stachniss and J. Gall},
   title     = {{SemanticKITTI: A Dataset for Semantic Scene Understanding of LiDAR Sequences}},

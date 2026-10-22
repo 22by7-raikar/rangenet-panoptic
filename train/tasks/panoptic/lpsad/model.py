@@ -12,9 +12,10 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from backbones.darknet import Backbone as _DarknetBackbone
+from backbones.darknet import BasicBlock
 
 from . import TRAIN_ROOT  # noqa: F401  (sets up sys.path for backbones/)
-from backbones.darknet import Backbone as _DarknetBackbone, BasicBlock
 
 
 class DarknetBackbone(_DarknetBackbone):
@@ -114,6 +115,14 @@ class TrilinearUpsample(nn.Module):
         return torch.where(use_nearest, nearest, w / total.clamp_min(1e-12))
 
     def forward(self, x, xyz_c, mask_c, xyz_f, mask_f):
+        """Upsample ``x`` (B, C, H, Wc) to (B, C, H, 2 Wc).
+
+        @param x       coarse features
+        @param xyz_c   coarse points (B, 3, H, Wc)
+        @param mask_c  valid coarse pixels (B, H, Wc)
+        @param xyz_f   fine points (B, 3, H, 2 Wc)
+        @param mask_f  valid fine pixels (B, H, 2 Wc)
+        """
         w = self.weights(xyz_c, mask_c, xyz_f, mask_f).to(x.dtype)
         out = None
         for i, (dr, j) in enumerate(self._candidates(x.shape[-1], x.device)):
@@ -123,7 +132,11 @@ class TrilinearUpsample(nn.Module):
 
 
 class DecoderStage(nn.Module):
-    """[x2 upsample] -> concat skip -> conv-bn-relu -> residual block."""
+    """One decoder stage: [x2 upsample] -> concat skip -> conv-bn-relu -> residual block.
+
+    @param upsample  "trilinear", "transpose", or None for a stage without
+                     upsampling (backbone output stride below 32)
+    """
 
     def __init__(self, c_in, c_skip, c_out, upsample, bn_d, rows=3, k=4):
         super().__init__()
@@ -153,6 +166,14 @@ class DecoderStage(nn.Module):
 
 
 class Decoder(nn.Module):
+    """Stack of DecoderStage undoing the backbone strides in reverse order.
+
+    @param params            ``cfg["model"]["decoder"]``
+    @param backbone_strides  horizontal stride of each encoder stage
+    @param skip_channels     {output stride: channels of the skip stored there}
+    @param feature_depth     channels of the encoder output
+    """
+
     def __init__(self, params, backbone_strides, skip_channels, feature_depth):
         super().__init__()
         channels = params["channels"]
@@ -162,7 +183,7 @@ class Decoder(nn.Module):
         self.ups = ups
         stages, c_in = [], feature_depth
         os = 2 ** sum(ups)
-        for up, c_out in zip(ups, channels):
+        for up, c_out in zip(ups, channels, strict=True):
             if up:
                 os //= 2
             stages.append(DecoderStage(
@@ -176,7 +197,7 @@ class Decoder(nn.Module):
 
     def forward(self, x, skips, pyramid):
         os = 2 ** sum(self.ups)
-        for up, stage in zip(self.ups, self.stages):
+        for up, stage in zip(self.ups, self.stages, strict=True):
             if up:
                 coarse = pyramid[os]
                 os //= 2
@@ -204,6 +225,17 @@ class ErrorHead(nn.Module):
 
 
 class LPSAD(nn.Module):
+    """Single-stage panoptic network (paper Fig. 2).
+
+    A shared Darknet encoder feeds a semantic decoder (embedding, classes,
+    categories, embedding radius) and an instance decoder (3D offset to the
+    instance centre, offset radius). See docs/architecture.md.
+
+    @param cfg          full configuration; uses ``cfg["model"]``
+    @param nclasses     number of semantic classes (20 for SemanticKITTI)
+    @param ncategories  number of categories including "unlabeled" (7)
+    """
+
     def __init__(self, cfg: dict, nclasses: int, ncategories: int):
         super().__init__()
         m = cfg["model"]
@@ -216,7 +248,7 @@ class LPSAD(nn.Module):
         # channels of the skip stored at each output stride
         widths = [32, 64, 128, 256, 512]
         skip_channels, os = {}, 1
-        for s, c in zip(strides, widths):
+        for s, c in zip(strides, widths, strict=True):
             if s == 2:
                 skip_channels[os] = c
                 os *= 2
@@ -240,6 +272,15 @@ class LPSAD(nn.Module):
         self.offset_err = ErrorHead(c, bn_d)
 
     def forward(self, image, xyz, mask):
+        """Run the network on a batch of range images.
+
+        @param image  normalised input, (B, 5, H, W)
+        @param xyz    raw 3D point per pixel, (B, 3, H, W), used for upsampling
+        @param mask   valid pixels, (B, H, W) bool
+        @return dict of (B, C, H, W) tensors: ``logits`` (classes),
+                ``cat_logits``, ``embedding`` (32), ``embedding_err`` (1),
+                ``offset`` (3, metres), ``offset_err`` (1, metres)
+        """
         pyramid = point_pyramid(xyz, mask, self.backbone.strides)
         feats, skips = self.backbone(image)
         sem = self.sem_decoder(feats, skips, pyramid)

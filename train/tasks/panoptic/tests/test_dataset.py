@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 
-from lpsad.dataset import (SemanticKittiPanoptic, collate, instance_targets,
-                           spherical_projection)
+from lpsad.dataset import SemanticKittiPanoptic, collate, instance_targets, spherical_projection
 
 
 def test_projection_keeps_closest_point():

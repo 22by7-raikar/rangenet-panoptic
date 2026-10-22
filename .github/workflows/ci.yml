@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TORCH_INDEX: https://download.pytorch.org/whl/cpu
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install ruff
+      - run: ruff check train/tasks/panoptic train/tasks/semantic/tests train/common/module_loader.py
+
+  panoptic-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install torch --index-url "$TORCH_INDEX"
+      - run: pip install -r train/tasks/panoptic/requirements.txt
+      - run: python -m pytest train/tasks/panoptic/tests -q
+
+  semantic-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install torch torchvision --index-url "$TORCH_INDEX"
+      - run: pip install numpy scipy PyYAML opencv-python-headless matplotlib Pillow tensorboard pytest
+      - run: python -m pytest train/tasks/semantic/tests -q
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -q && sudo apt-get install -y -q doxygen graphviz
+      - name: Build diagrams and API reference
+        run: |
+          touch docs/diagrams/*.dot   # always re-render from source
+          make -C docs html
+      - name: Fail on Doxygen warnings
+        run: |
+          if [ -s docs/_build/doxygen-warnings.log ]; then
+            cat docs/_build/doxygen-warnings.log; exit 1
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  # Publishes the docs to GitHub Pages from master. Enable it once:
+  # Settings > Pages > Source: GitHub Actions, then set the repository
+  # variable DEPLOY_DOCS to "true" (Settings > Secrets and variables > Actions).
+  deploy-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && vars.DEPLOY_DOCS == 'true'
+    needs: [docs, panoptic-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

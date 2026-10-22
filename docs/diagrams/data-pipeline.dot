@@ -1,0 +1,32 @@
+// SemanticKittiPanoptic.__getitem__ (train/tasks/panoptic/lpsad/dataset.py)
+digraph data {
+  graph [rankdir=LR, bgcolor="white", pad=0.3, nodesep=0.3, ranksep=0.45,
+         fontname="Helvetica", fontsize=12, labeljust=l];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.15,0.06"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=8, arrowsize=0.6];
+
+  bin [label="NNNNNN.bin", shape=cylinder, fillcolor="#e8eef7"];
+  lab [label="NNNNNN.label", shape=cylinder, fillcolor="#e8eef7"];
+  aug [label="Augment\nyaw rotation, mirror, scale\n(train only)"];
+  lut [label="learning_lut\nraw id -> 20 classes"];
+  tgt [label="instance_targets()\ncompact ids per scan\ncentre = mean of ALL points\noffset = x - centre"];
+  prj [label="spherical_projection()\nclosest point wins\nproj_idx (H x W)"];
+  img [label="range image\nnormalise, mask"];
+
+  subgraph cluster_out {
+    label="item (dict of tensors)"; style="rounded,filled"; color="#b08900"; fillcolor="#fffbef";
+    o1 [label="input 5xHxW | xyz 3xHxW | mask"];
+    o2 [label="sem | cat | inst  (H x W)\noffset 3xHxW"];
+    o3 [label="px, py | point_sem | point_inst\n(per point, variable length)"];
+  }
+  col [label="collate()\nstack images,\nlist per-point data", fillcolor="#fff7e0", color="#b08900"];
+
+  bin -> aug -> prj -> img -> o1;
+  lab -> lut -> tgt;
+  aug -> tgt [label="xyz"];
+  tgt -> o2 [label="via proj_idx"];
+  prj -> o2 [style=dashed];
+  prj -> o3;
+  {o1 o2 o3} -> col;
+}

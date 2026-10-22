@@ -1,0 +1,60 @@
+# Doxygen configuration: only non-default settings.
+# Build: `make -C docs html` (or `doxygen Doxyfile` from the repository root),
+# then open docs/_build/html/index.html.
+
+PROJECT_NAME           = "RangeNet Panoptic"
+PROJECT_BRIEF          = "LiDAR panoptic segmentation on range images: RangeNet++ and LPSAD"
+OUTPUT_DIRECTORY       = docs/_build
+
+# --- input --------------------------------------------------------------------
+INPUT                  = README.md \
+                         docs/architecture.md \
+                         docs/design-decisions.md \
+                         docs/development.md \
+                         train/tasks/panoptic/README.md \
+                         train/tasks/semantic/README.md \
+                         train/tasks/panoptic \
+                         train/backbones \
+                         train/common \
+                         train/tasks/semantic
+FILE_PATTERNS          = *.py *.md
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */tests/* */_build/* */readme.md
+USE_MDFILE_AS_MAINPAGE = ./README.md
+IMAGE_PATH             = docs/diagrams
+STRIP_FROM_PATH        = .
+
+# --- Python -------------------------------------------------------------------
+OPTIMIZE_OUTPUT_JAVA   = YES
+PYTHON_DOCSTRING       = NO
+JAVADOC_AUTOBRIEF      = YES
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+HIDE_UNDOC_RELATIONS   = NO
+SOURCE_BROWSER         = YES
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 3
+
+# --- output -------------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+HTML_COLORSTYLE        = AUTO_LIGHT
+HTML_DYNAMIC_SECTIONS  = YES
+SEARCHENGINE           = YES
+
+# --- graphs (Graphviz) ----------------------------------------------------------
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_COMMON_ATTR        = "fontname=Helvetica,fontsize=10"
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+UML_LOOK               = NO
+DOT_GRAPH_MAX_NODES    = 60
+
+# --- warnings -----------------------------------------------------------------
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_LOGFILE           = docs/_build/doxygen-warnings.log

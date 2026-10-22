@@ -1,0 +1,34 @@
+// Trainer (train/tasks/panoptic/lpsad/trainer.py)
+digraph training {
+  graph [rankdir=TB, bgcolor="white", pad=0.3, nodesep=0.35, ranksep=0.35,
+         fontname="Helvetica", fontsize=12, labeljust=l];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10,
+         color="#5b6b7f", fillcolor="#f4f6f9", margin="0.15,0.06"];
+  edge  [color="#5b6b7f", fontname="Helvetica", fontsize=8, arrowsize=0.6];
+
+  subgraph cluster_epoch {
+    label="train_epoch()"; style="rounded,filled"; color="#3d6fb6"; fillcolor="#f7faff";
+    ld  [label="DataLoader (augmented)"];
+    fw  [label="forward under autocast\nbf16 | fp16 | fp32"];
+    ls  [label="LPSADLoss\nsem + cat + center + center_err\n+ attract + repel + embed_err"];
+    bw  [label="backward  (loss / accumulate)"];
+    st  [label="every N batches: unscale, clip,\nAdam step, LambdaLR step\nwarm-up, then x0.99 per epoch"];
+    ld -> fw -> ls -> bw -> st;
+    st -> ld [style=dashed, constraint=false];
+  }
+  subgraph cluster_val {
+    label="validate()"; style="rounded,filled"; color="#c8553d"; fillcolor="#fff8f5";
+    vf  [label="forward + loss"];
+    pi  [label="panoptic_inference()\nradius scale from last epoch"];
+    pe  [label="PanopticEval\nPQ, RQ, SQ, mIoU"];
+    rs  [label="radius_scale =\nval error / train error"];
+    vf -> pi -> pe;
+    vf -> rs;
+  }
+  ck [label="checkpoints\nlast.pt, best.pt (by PQ)\nmodel, optimiser, scheduler,\nscaler, radius_scale, config", shape=note, fillcolor="#fff7e0", color="#b08900"];
+  tb [label="TensorBoard", shape=note, fillcolor="#fff7e0", color="#b08900"];
+
+  st -> vf [label="end of epoch", lhead=cluster_val];
+  ls -> rs [style=dotted, label="mean train error"];
+  pe -> ck; rs -> ck; pe -> tb;
+}

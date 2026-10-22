@@ -8,4 +8,8 @@
 .catkin_tools/
 devel/
 logs/
-external.hpp
+external.hpp__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+docs/_build/
