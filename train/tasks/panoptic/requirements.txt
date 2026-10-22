@@ -1,5 +1,6 @@
+# Minimal dependencies for the panoptic task alone.
 torch>=2.1
 numpy>=1.24
 PyYAML>=6.0
 pytest>=7.0
-# optional: tensorboard
+tensorboard>=2.14  # optional, for training curves

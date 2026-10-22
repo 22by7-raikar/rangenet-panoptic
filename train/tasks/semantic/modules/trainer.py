@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
-import imp
+from common.module_loader import load_source
 import yaml
 import time
 from PIL import Image
@@ -51,7 +51,7 @@ class Trainer():
 
     # get the data
     parserPath = os.path.join(booger.TRAIN_PATH, "tasks", "semantic",  "dataset", self.DATA["name"], "parser.py")
-    parserModule = imp.load_source("parserModule", parserPath)
+    parserModule = load_source("parserModule", parserPath)
     self.parser = parserModule.Parser(root=self.datadir,
                                       train_sequences=self.DATA["split"]["train"],
                                       valid_sequences=self.DATA["split"]["valid"],
@@ -310,7 +310,8 @@ class Trainer():
         in_vol = in_vol.cuda()
         proj_mask = proj_mask.cuda()
       if self.gpu:
-        proj_labels = proj_labels.cuda(non_blocking=True).long()
+        proj_labels = proj_labels.cuda(non_blocking=True)
+      proj_labels = proj_labels.long()
 
       # compute output
       output = model(in_vol, proj_mask)
@@ -407,7 +408,8 @@ class Trainer():
           in_vol = in_vol.cuda()
           proj_mask = proj_mask.cuda()
         if self.gpu:
-          proj_labels = proj_labels.cuda(non_blocking=True).long()
+          proj_labels = proj_labels.cuda(non_blocking=True)
+        proj_labels = proj_labels.long()
 
         # compute output
         output = model(in_vol, proj_mask)
