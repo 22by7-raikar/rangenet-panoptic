@@ -5,6 +5,8 @@ class are grouped into connected components, where two points are connected
 when they are closer than a class-specific radius. This is the classic
 "semantics + clustering" baseline; it needs no training and no instance
 labels, and fails where objects of one class touch (parked cars, crowds).
+
+@ingroup inference
 """
 
 import numpy as np

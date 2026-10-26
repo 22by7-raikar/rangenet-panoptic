@@ -47,6 +47,36 @@ panoptic segmentation, with three requirements:
 
 ![System overview](docs/diagrams/system.svg)
 
+## Measured so far
+
+Real KITTI scans (20 from sequence 08), no training. More figures and the
+commands to make them are in [docs/figures](docs/figures/README.md).
+
+**The range image keeps only part of each scan.** Each pixel keeps its
+closest point; every other point gets its label copied from that pixel.
+
+![Points kept by the range projection](docs/figures/projection.png)
+
+| Width | 64 x 512 | 64 x 1024 | 64 x 2048 | 64 x 4096 |
+|---|---|---|---|---|
+| Points kept | 21.0% | 41.1% | 77.7% | 90.9% |
+
+**Distance-aware upsampling keeps object borders.** Rebuilding the full-width
+range image from half width, LPSAD's upsampling errs 0.30 m at object edges,
+against 3.1 m for 2D interpolation, which blends foreground and background.
+
+![Upsampling error at object edges](docs/figures/upsampling.png)
+
+| Upsampling | Mean abs. error, all | at object edges |
+|---|---|---|
+| nearest | 0.29 m | 3.29 m |
+| 2D linear | 0.27 m | 3.11 m |
+| LPSAD trilinear | 0.07 m | 0.30 m |
+
+(Range is geometric, so 3D-distance weighting favours it by construction. The
+figure shows that features come from the same surface; the paper measures
+the effect on panoptic quality, 30.8 → 36.5 PQ.)
+
 ## Quick start
 
 ```sh
@@ -118,10 +148,12 @@ faithful, fast, modern baseline, not the state of the art.
 |---|---|
 | [Architecture](docs/architecture.md) | System and subsystem design with diagrams |
 | [Design decisions](docs/design-decisions.md) | Why things are the way they are, including every deviation from the paper |
+| [Code walkthrough](docs/code-walkthrough.md) | One scan through the code: every step, function and tensor shape, paper equations mapped to code |
+| [Figures](docs/figures/README.md) | Images and tables for slides, with the commands that make them |
 | [Development](docs/development.md) | Setup, tests, docs build, CI, conventions |
 | [Panoptic task](train/tasks/panoptic/README.md) | Usage, configuration, reference results |
 | [Semantic task](train/tasks/semantic/README.md) | Upstream RangeNet++ usage |
-| API reference | `doxygen Doxyfile`, then open `docs/_build/html/index.html` (also built by CI) |
+| API reference | `make -C docs html`, then open `docs/_build/html/index.html` (also built by CI). *Topics* groups the API by subsystem, with diagrams |
 
 ## Repository layout
 
@@ -129,8 +161,9 @@ faithful, fast, modern baseline, not the state of the art.
 .
 ├── README.md                    this file (also the Doxygen main page)
 ├── Doxyfile                     API reference configuration
-├── docs/                        architecture, design decisions, development
-│   └── diagrams/                Graphviz sources (*.dot) and rendered *.svg
+├── docs/                        architecture, walkthrough, design decisions, development
+│   ├── diagrams/                Graphviz sources (*.dot) and rendered *.svg
+│   └── figures/                 result images and tables (from tools/visualize.py)
 ├── requirements.txt
 └── train/
     ├── backbones/               SqueezeSeg, SqueezeSegV2, Darknet encoders (shared)

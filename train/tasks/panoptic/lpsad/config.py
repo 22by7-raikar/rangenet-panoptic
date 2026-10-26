@@ -1,4 +1,7 @@
-"""Config loading and the label look-up tables derived from it."""
+"""Config loading and the label look-up tables derived from it.
+
+@ingroup training
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,13 +25,16 @@ class LabelSpace:
 
     @property
     def nclasses(self) -> int:
+        """Number of training classes (20 for SemanticKITTI, incl. unlabeled)."""
         return len(self.names)
 
     @property
     def ncategories(self) -> int:
+        """Number of categories including 'unlabeled'."""
         return len(self.category_names)
 
     def is_thing(self) -> np.ndarray:
+        """Boolean mask over classes: True for thing classes."""
         mask = np.zeros(self.nclasses, dtype=bool)
         mask[self.things] = True
         return mask

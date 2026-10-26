@@ -1,4 +1,7 @@
-"""LPSAD losses (paper Eqs. 2-7) plus the category loss."""
+"""LPSAD losses (paper Eqs. 2-7) plus the category loss.
+
+@ingroup losses
+"""
 
 import numpy as np
 import torch

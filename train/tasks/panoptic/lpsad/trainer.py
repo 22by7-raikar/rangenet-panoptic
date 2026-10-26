@@ -1,4 +1,7 @@
-"""Training / validation loop."""
+"""Training / validation loop.
+
+@ingroup training
+"""
 
 import math
 import time
@@ -18,6 +21,14 @@ from .model import LPSAD
 
 
 def make_loader(cfg, labels, split, train, max_scans=None):
+    """DataLoader for one split of ``cfg["train"]["split"]``.
+
+    @param cfg        full configuration
+    @param labels     label space
+    @param split      "train", "valid" or "test"
+    @param train      shuffle, augment and drop the last incomplete batch
+    @param max_scans  evenly spaced subset, or None for all scans
+    """
     t = cfg["train"]
     augment = Augment(**t["augment"]) if train and t.get("augment") else None
     ds = SemanticKittiPanoptic(t["data_root"], t["split"][split], cfg, labels,
@@ -29,6 +40,11 @@ def make_loader(cfg, labels, split, train, max_scans=None):
 
 
 def autocast_context(mode: str, device: torch.device):
+    """Autocast context for the configured precision; a no-op on CPU or "none".
+
+    @param mode    "bf16", "fp16" or "none"
+    @param device  device the model runs on
+    """
     if device.type != "cuda" or mode == "none":
         return nullcontext()
     dtype = torch.bfloat16 if mode == "bf16" else torch.float16
@@ -36,6 +52,7 @@ def autocast_context(mode: str, device: torch.device):
 
 
 def to_device(batch, device):
+    """Move the tensors of a collated batch to ``device``; lists stay where they are."""
     return {k: v.to(device, non_blocking=True) if torch.is_tensor(v) else v
             for k, v in batch.items()}
 
@@ -106,6 +123,11 @@ class Trainer:
 
     # ------------------------------------------------------------------ io
     def save(self, name: str, metrics: dict | None = None):
+        """Write a checkpoint with everything needed to resume or to run inference.
+
+        @param name     file name inside the log directory
+        @param metrics  latest validation metrics, stored for reference
+        """
         torch.save({
             "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
@@ -119,6 +141,7 @@ class Trainer:
         }, self.logdir / name)
 
     def load(self, path):
+        """Restore model, optimiser, scheduler, scaler, epoch and radius scale."""
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(ckpt["model"])
         self.optimizer.load_state_dict(ckpt["optimizer"])
@@ -130,6 +153,7 @@ class Trainer:
         print(f"resumed from {path} at epoch {self.epoch}")
 
     def log(self, tag, values: dict, step):
+        """Write the numeric values to TensorBoard under ``tag/``, if available."""
         if self.writer is None:
             return
         for k, v in values.items():

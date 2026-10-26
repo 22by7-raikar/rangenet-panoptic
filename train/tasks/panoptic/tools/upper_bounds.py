@@ -10,11 +10,14 @@ Uses ground truth only, at several image widths:
 2. **Clustering.** True classes and true centre offsets plus Gaussian noise
    (``--noise`` metres per axis) go through the LPSAD instance extractor. The
    learned radius is replaced by its ideal value, each pixel's actual offset
-   error (at least ``--radius-floor``). Compares radius modes ``seed``
-   (paper), ``sum`` and a fixed radius.
+   error (at least ``--radius-floor``). Compares the paper's ``seed`` rule at
+   several radius scales (the paper scales radii by val / train error), the
+   ``sum`` option and a fixed radius.
 
     python tools/upper_bounds.py -d /data/semantic-kitti -s 08 --max-scans 200 \
         --widths 512 1024 2048 --noise 0 0.1 0.2 0.4 --json bounds.json
+
+@ingroup tools
 """
 
 import argparse
@@ -36,24 +39,35 @@ DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "lpsad-darknet
 
 
 def pct(res, keys=("PQ", "RQ", "SQ", "PQ_th", "RQ_th", "SQ_th", "PQ_st", "mIoU")):
+    """Selected metrics in percent, rounded."""
     return {k: round(100 * res[k], 2) for k in keys}
 
 
-def cluster_modes(fixed_radius: float):
-    return {
-        "seed": dict(learned_radius=True, radius_mode="seed"),
-        "sum": dict(learned_radius=True, radius_mode="sum"),
-        f"fixed {fixed_radius} m": dict(learned_radius=False, center_radius=fixed_radius),
-    }
+def cluster_modes(fixed_radius: float, seed_scales: list[float]) -> dict[str, dict]:
+    """Clustering variants compared: name -> extract_instances() keyword arguments.
+
+    The paper multiplies learned radii by a constant (val error / train error,
+    usually > 1), so ``seed`` is evaluated at several scales.
+    """
+    modes = {f"seed x{s:g}": dict(learned_radius=True, radius_mode="seed", scale=(s, s))
+             for s in seed_scales}
+    modes["sum"] = dict(learned_radius=True, radius_mode="sum")
+    modes[f"fixed {fixed_radius} m"] = dict(learned_radius=False, center_radius=fixed_radius)
+    return modes
 
 
 def run_width(cfg, labels, args, width, gen):
+    """Projection and clustering ceilings at one image width.
+
+    @return dict with point and instance statistics, the projection ceiling and
+            PQ-th per (noise, clustering mode)
+    """
     cfg = copy.deepcopy(cfg)
     cfg["sensor"]["width"] = width
     ds = SemanticKittiPanoptic(args.dataset, args.sequences, cfg, labels, gt=True,
                                max_scans=args.max_scans)
     is_thing = torch.from_numpy(labels.is_thing())
-    modes = cluster_modes(args.fixed_radius)
+    modes = cluster_modes(args.fixed_radius, args.seed_scales)
     proj_eval = PanopticEval(labels.nclasses, labels.ignore, labels.things)
     evals = {(s, m): PanopticEval(labels.nclasses, labels.ignore, labels.things)
              for s in args.noise for m in modes}
@@ -105,7 +119,8 @@ def run_width(cfg, labels, args, width, gen):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-d", "--dataset", required=True)
     ap.add_argument("-s", "--sequences", nargs="+", type=int, default=[8])
@@ -113,6 +128,8 @@ def main():
     ap.add_argument("--widths", nargs="+", type=int, default=[512, 1024, 2048])
     ap.add_argument("--noise", nargs="+", type=float, default=[0.0, 0.1, 0.2, 0.4])
     ap.add_argument("--fixed-radius", type=float, default=0.5)
+    ap.add_argument("--seed-scales", type=float, nargs="+", default=[1.0, 2.0, 3.0],
+                    help="radius scale factors for the paper's seed rule")
     ap.add_argument("--radius-floor", type=float, default=0.05,
                     help="lower bound of the ideal learned radius, metres")
     ap.add_argument("--max-scans", type=int, default=200)

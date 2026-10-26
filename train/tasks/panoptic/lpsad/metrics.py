@@ -6,6 +6,8 @@ This mirrors the logic of ``PanopticEval`` in the official semantic-kitti-api
 an ignored class are dropped, a segment pair matches at IoU > 0.5, and
 unmatched segments with fewer than ``min_points`` points are not counted.
 Use the official ``evaluate_panoptic.py`` for numbers you report.
+
+@ingroup evaluation
 """
 
 import numpy as np
@@ -32,6 +34,7 @@ class PanopticEval:
         self.reset()
 
     def reset(self):
+        """Clear all accumulated statistics."""
         self.conf = np.zeros((self.n, self.n), dtype=np.int64)  # [pred, gt]
         self.tp = np.zeros(self.n, dtype=np.int64)
         self.fp = np.zeros(self.n, dtype=np.int64)
@@ -77,6 +80,7 @@ class PanopticEval:
             self.fp[cl] += np.sum((c_pred >= self.min_points) & ~matched_pred)
 
     def semantic_iou(self) -> np.ndarray:
+        """IoU per class from the confusion matrix (ignored ground truth excluded)."""
         conf = self.conf.copy()
         conf[:, self.ignore] = 0
         tp = np.diag(conf).astype(np.float64)

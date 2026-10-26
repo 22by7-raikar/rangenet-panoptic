@@ -11,17 +11,20 @@ INPUT                  = README.md \
                          docs/architecture.md \
                          docs/design-decisions.md \
                          docs/development.md \
+                         docs/code-walkthrough.md \
+                         docs/groups.dox \
+                         docs/figures/README.md \
                          train/tasks/panoptic/README.md \
                          train/tasks/semantic/README.md \
                          train/tasks/panoptic \
                          train/backbones \
                          train/common \
                          train/tasks/semantic
-FILE_PATTERNS          = *.py *.md
+FILE_PATTERNS          = *.py *.md *.dox
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = */tests/* */_build/* */readme.md
 USE_MDFILE_AS_MAINPAGE = ./README.md
-IMAGE_PATH             = docs/diagrams
+IMAGE_PATH             = docs/diagrams docs/figures
 STRIP_FROM_PATH        = .
 
 # --- Python -------------------------------------------------------------------

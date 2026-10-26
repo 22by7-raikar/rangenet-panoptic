@@ -1,4 +1,7 @@
-"""Instance extractor (paper Sec. III-D) and panoptic post-processing."""
+"""Instance extractor (paper Sec. III-D) and panoptic post-processing.
+
+@ingroup inference
+"""
 
 import torch
 

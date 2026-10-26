@@ -4,6 +4,8 @@ Sec. III-B/C of the paper. Both decoders upsample with the distance-aware
 trilinear upsampling, which interpolates coarse features with weights from
 real 3D distances taken from a point cloud pyramid built alongside the
 backbone.
+
+@ingroup model
 """
 
 from collections import OrderedDict
@@ -28,6 +30,16 @@ class DarknetBackbone(_DarknetBackbone):
     """
 
     def run_layer(self, x, layer, skips, os):
+        """Run one encoder layer, storing its input as skip when it downsamples.
+
+        Same as upstream ``Backbone.run_layer`` without ``detach()``.
+
+        @param x       input features
+        @param layer   module to run
+        @param skips   {output stride: features}, updated in place
+        @param os      current output stride
+        @return (output, skips, new output stride)
+        """
         y = layer(x)
         if y.shape[2] < x.shape[2] or y.shape[3] < x.shape[3]:
             skips[os] = x
@@ -156,6 +168,14 @@ class DecoderStage(nn.Module):
         self.block = BasicBlock(c_out, [c_in, c_out], bn_d)
 
     def forward(self, x, skip=None, coarse=None, fine=None):
+        """Run the stage.
+
+        @param x       features at the coarse resolution
+        @param skip    encoder features at the fine resolution, or None
+        @param coarse  (xyz, mask) of the point pyramid at the coarse stride
+        @param fine    (xyz, mask) of the point pyramid at the fine stride
+        @return features at the fine resolution
+        """
         if self.upsample == "trilinear":
             x = self.up(x, coarse[0], coarse[1], fine[0], fine[1])
         elif self.upsample == "transpose":
@@ -196,6 +216,13 @@ class Decoder(nn.Module):
         self.out_channels = channels[-1]
 
     def forward(self, x, skips, pyramid):
+        """Decode encoder features back to full resolution.
+
+        @param x        encoder output, (B, C, H, W / OS)
+        @param skips    {output stride: encoder features}
+        @param pyramid  {output stride: (xyz, mask)} from point_pyramid()
+        @return features, (B, channels[-1], H, W)
+        """
         os = 2 ** sum(self.ups)
         for up, stage in zip(self.ups, self.stages, strict=True):
             if up:
@@ -221,6 +248,7 @@ class ErrorHead(nn.Module):
         )
 
     def forward(self, x):
+        """Non-negative radius per pixel, (B, 1, H, W)."""
         return F.softplus(self.net(x))
 
 
@@ -302,6 +330,7 @@ class LPSAD(nn.Module):
         self.backbone.load_state_dict(state, strict=True)
 
     def set_backbone_trainable(self, trainable: bool):
+        """Enable or disable gradients for all encoder parameters."""
         for p in self.backbone.parameters():
             p.requires_grad_(trainable)
 

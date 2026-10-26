@@ -3,6 +3,8 @@
 
     python train.py -c config/lpsad-darknet53.yaml -d /data/semantic-kitti \
         -l logs/lpsad [-p /models/darknet53] [--resume logs/lpsad/last.pt]
+
+@ingroup cli
 """
 
 import argparse
@@ -14,7 +16,8 @@ from lpsad.trainer import Trainer
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-c", "--config", default="config/lpsad-darknet53.yaml")
     ap.add_argument("-d", "--dataset", help="overrides train.data_root")
@@ -41,6 +44,11 @@ def main():
 
 
 def apply_override(cfg: dict, item: str):
+    """Apply one ``key.sub=value`` override to the config, in place.
+
+    @param cfg   configuration dict
+    @param item  dotted key and YAML value, e.g. ``train.batch_size=2``
+    """
     import yaml
     key, value = item.split("=", 1)
     *path, last = key.split(".")

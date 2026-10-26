@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 from conftest import PANOPTIC
@@ -64,9 +65,11 @@ def test_upper_bounds(cfg, tmp_path):
     assert 0 < res["points_visible_pct"] < 100
     clus = res["clustering"]
     # with perfect offsets clustering reaches the projection ceiling
-    assert clus["noise 0.0 m / seed"]["PQ_th"] == res["projection_ceiling"]["PQ_th"]
-    # with noisy offsets the paper's seed radius fragments, seed + candidate doesn't
-    assert clus["noise 0.3 m / sum"]["PQ_th"] > clus["noise 0.3 m / seed"]["PQ_th"]
+    assert clus["noise 0.0 m / seed x1"]["PQ_th"] == res["projection_ceiling"]["PQ_th"]
+    # with noisy offsets an unscaled seed radius fragments objects; scaling it
+    # (as the paper does) or adding the candidate's radius recovers them
+    assert clus["noise 0.3 m / sum"]["PQ_th"] > clus["noise 0.3 m / seed x1"]["PQ_th"]
+    assert clus["noise 0.3 m / seed x3"]["PQ_th"] > clus["noise 0.3 m / seed x1"]["PQ_th"]
 
 
 def test_benchmark(cfg, tmp_path):
@@ -78,7 +81,6 @@ def test_benchmark(cfg, tmp_path):
 
 def test_fetch_extracts_matching_scans_and_labels(cfg, tmp_path):
     import zipfile
-    from pathlib import Path
 
     root = Path(cfg["train"]["data_root"]) / "sequences"
     velodyne, labels = tmp_path / "velodyne.zip", tmp_path / "labels.zip"
@@ -95,3 +97,38 @@ def test_fetch_extracts_matching_scans_and_labels(cfg, tmp_path):
     assert scans == ["000000", "000003"]
     assert sorted(p.stem for p in (seq / "labels").glob("*.label")) == scans
     assert not (out / "dataset" / "sequences" / "00").exists()
+
+
+def test_visualize_figures_and_tables(cfg, tmp_path):
+    root = cfg["train"]["data_root"]
+    for fig in ("projection", "upsampling"):
+        out = tmp_path / f"{fig}.png"
+        run("tools/visualize.py", fig, "-d", root, "-s", "08", "-o", out,
+            "--widths", "256", "512", "--width", "512", "--crop-width", "64", "--dpi", "40")
+        assert out.stat().st_size > 0
+        assert "|---|" in out.with_suffix(".md").read_text()
+    # labels present: ground-truth panels; the labels also serve as predictions
+    preds = tmp_path / "preds" / "sequences" / "08" / "predictions"
+    preds.parent.mkdir(parents=True)
+    preds.symlink_to(Path(root) / "sequences" / "08" / "labels")
+    out = tmp_path / "scan.svg"
+    run("tools/visualize.py", "scan", "-d", root, "-s", "08", "-p", tmp_path / "preds",
+        "-o", out, "--width", "256", "--dpi", "40")
+    svg = out.read_text()
+    assert "ground truth: instances" in svg and "prediction: classes" in svg
+
+
+def test_report_tables_and_charts(cfg, tmp_path):
+    root = cfg["train"]["data_root"]
+    run("tools/upper_bounds.py", "-d", root, "--widths", "256", "--noise", "0", "0.3",
+        "--max-scans", "2", "--json", tmp_path / "b.json")
+    run("tools/baseline.py", "-d", root, "--semantics", "gt", "-s", "08",
+        "--json", tmp_path / "g.json")
+    run("tools/benchmark.py", "-d", root, "--widths", "256", "--layers", "21", "--iters", "1",
+        "--warmup", "0", "--json", tmp_path / "t.json")
+    out = tmp_path / "report"
+    run("tools/report.py", tmp_path / "b.json", tmp_path / "g.json", tmp_path / "t.json",
+        "-o", out, "--names", "Bounds", "Oracle", "CPU")
+    md = (out / "report.md").read_text()
+    assert "| Oracle |" in md and "seed x1" in md and "Network (ms)" in md
+    assert (out / "upper_bounds.png").exists() and (out / "benchmark.png").exists()

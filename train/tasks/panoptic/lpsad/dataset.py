@@ -1,4 +1,7 @@
-"""SemanticKITTI panoptic dataset: range-image projection plus instance targets."""
+"""SemanticKITTI panoptic dataset: range-image projection plus instance targets.
+
+@ingroup data
+"""
 
 from pathlib import Path
 
@@ -46,6 +49,11 @@ class Augment:
         self.rng = rng or np.random.default_rng()
 
     def __call__(self, xyz: np.ndarray) -> np.ndarray:
+        """Return an augmented copy of the points.
+
+        @param xyz  points, (N, 3)
+        @return transformed points, (N, 3)
+        """
         xyz = xyz.copy()
         if self.rotate:
             a = self.rng.uniform(0.0, 2.0 * np.pi)
