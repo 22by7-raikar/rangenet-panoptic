@@ -76,9 +76,9 @@ cluster:
   features: "both"       # "center", "embedding" or "both" (paper best: both)
   learned_radius: true   # false: use fixed radii below
   # "seed": join if within the seed's radius (paper). "sum": within seed +
-  # candidate radius; two noisy centres with errors e1, e2 can be e1 + e2
-  # apart, and "seed" fragmented objects badly in our tests.
-  radius_mode: "sum"
+  # candidate radius, an option for noisy (e.g. under-trained) offsets; see
+  # docs/design-decisions.md #6 and tools/upper_bounds.py.
+  radius_mode: "seed"
   fixed_center_radius: 0.5      # metres
   fixed_embedding_radius: 0.5
   # learned radii are multiplied by (val error / train error), estimated

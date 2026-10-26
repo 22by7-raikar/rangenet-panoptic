@@ -87,15 +87,24 @@ Verified so far, on CPU with synthetic scans:
   the model overfits a small set: car PQ 0.41 and person PQ 0.80.
 - The semantic pipeline runs end to end on PyTorch 2.14 / Python 3.13.
 - The panoptic model loads backbone weights written by the semantic trainer.
+- Single KITTI sequences, or subsets of one, download without the 85 GB
+  archive (tested against the KITTI server).
 
-Next:
+Next, without training (about 1 GB of data, see
+[Real numbers without training](train/tasks/panoptic/README.md#real-numbers-without-training)):
 
-1. Train on SemanticKITTI on the 6 GB GPU. Check memory at 64 x 1024, that the
-   2019 RangeNet++ checkpoint files load, and clustering speed.
-2. Reproduce the paper's validation ablations (Tables III and IV) and fill in
-   the [results table](train/tasks/panoptic/README.md#reference-results-paper-semantickitti).
-3. If clustering is a bottleneck, vectorise the seed loop.
-4. Optional: a query-based mask head, or 4D panoptic (tracking), on the same
+1. Projection and clustering ceilings of the range-image approach on
+   sequence 08 (`tools/upper_bounds.py`).
+2. A training-free panoptic baseline: pre-trained RangeNet++ semantics plus
+   Euclidean clustering (`tools/baseline.py`). This also checks that the 2019
+   checkpoints load.
+3. Speed and training memory on the 6 GB GPU (`tools/benchmark.py`).
+
+Then:
+
+4. Train LPSAD on a subset of sequences and compare with step 2; reproduce
+   the paper's ablations (Tables III, IV) as far as the subset allows.
+5. Optional: a query-based mask head, or 4D panoptic (tracking), on the same
    data pipeline.
 
 For context: published LiDAR-only point-based methods reach about 65 PQ on the
@@ -131,6 +140,7 @@ faithful, fast, modern baseline, not the state of the art.
         └── panoptic/            LPSAD
             ├── lpsad/           config, dataset, model, losses, cluster, metrics, trainer
             ├── config/          lpsad-darknet53.yaml
+            ├── tools/           data download, training-free baseline, ceilings, benchmark
             ├── tests/           unit + end-to-end tests on synthetic scans
             └── train.py, infer.py, evaluate.py
 ```

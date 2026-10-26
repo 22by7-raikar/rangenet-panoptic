@@ -11,7 +11,7 @@ paper say whether they **follow** it or **deviate** from it.
 | 3 | Keep the upstream layout and code style of the semantic task | structure |
 | 4 | Do not detach skip connections | deviation from upstream |
 | 5 | Trilinear upsampling neighbourhood | interpretation |
-| 6 | Clustering radius: seed + candidate | deviation |
+| 6 | Clustering radius: paper rule by default, `sum` as an option | follows paper |
 | 7 | Bounded repel loss | deviation |
 | 8 | Class weights 1 / ln(1.02 + f) | interpretation |
 | 9 | Instance centres from the full point cloud | interpretation |
@@ -19,6 +19,7 @@ paper say whether they **follow** it or **deviate** from it.
 | 11 | Training for a 6 GB GPU | engineering |
 | 12 | Own PQ evaluator, official script for reported numbers | engineering |
 | 13 | Diagrams as Graphviz sources, API docs with Doxygen | engineering |
+| 14 | Measure without training first | scope |
 
 ## 1. Rebuild LPSAD rather than design a new panoptic head
 
@@ -98,20 +99,26 @@ gradient. Configurable as `trilinear_rows` and `trilinear_k`.
 horizontal-only downsampling. Memory stays linear in the feature map, because
 the weights need no gradient.
 
-## 6. Clustering radius: seed + candidate
+## 6. Clustering radius: paper rule by default, `sum` as an option
 
 **Context.** In the paper a pixel joins the seed's instance if its predicted
 centre lies within the *seed's* learned radius, and the radius learns the
 seed's own offset error. Two predictions with errors `e1` and `e2` from the
-true centre can be up to `e1 + e2` apart. In tests the paper's rule split
-objects into many fragments: car PQ 0.00 on an overfitted synthetic model.
+true centre can be up to `e1 + e2` apart, so with noisy offsets the rule
+can fragment objects. On a small, under-trained model on synthetic scans it
+did (car PQ 0.00 with `seed`, 0.38 with seed + candidate radius). That
+evidence is weak: the paper's rule was tuned on a fully trained network,
+whose offsets are far more accurate.
 
-**Decision.** Default `cluster.radius_mode: sum`: compare against seed radius
-plus candidate radius. `seed` reproduces the paper.
+**Decision.** The default `cluster.radius_mode: seed` follows the paper.
+`sum` (seed + candidate radius) is available as an option.
+`tools/upper_bounds.py` measures both on real scans with controlled offset
+noise, and `infer.py --cluster radius_mode=sum` compares them on a trained
+model.
 
-**Consequences.** On the same model car PQ rose to 0.38 (both features) and
-0.48 (centres only). This is a deliberate deviation. Compare both modes on
-SemanticKITTI with `infer.py --cluster radius_mode=seed`.
+**Consequences.** The re-implementation stays faithful by default. The
+trade-off (`sum` resists fragmentation but can merge neighbouring objects) is
+settled with measurements on SemanticKITTI, not on synthetic data.
 
 ## 7. Bounded repel loss
 
@@ -193,3 +200,17 @@ Markdown pages.
 
 **Consequences.** One source per diagram, diffable, no binary images, and no
 diagrams drifting from the code they describe.
+
+## 14. Measure without training first
+
+**Context.** Full SemanticKITTI is 85 GB and full LPSAD training takes days
+on a laptop GPU. Several open questions don't need a trained model: how much
+the range image limits panoptic quality, which clustering rule to use, what
+fits in 6 GB, and how a training-free baseline compares with the paper.
+
+**Decision.** Add `tools/` for these, working on single sequences or subsets
+fetched from the KITTI archive, before any training.
+
+**Consequences.** Real numbers and settled design questions from about 1 GB
+of data and no GPU time. Training then starts from a measured baseline and a
+known memory budget.

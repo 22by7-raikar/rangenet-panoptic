@@ -42,11 +42,11 @@ Where the paper leaves details open:
   Pairs are formed within each scan.
 - **Instance centres** are the mean of all points of the instance in the
   full cloud, not only the projected ones.
-- **Clustering radius** (`cluster.radius_mode`). The paper compares a
-  candidate against the seed's learned radius (`seed`). Two noisy centre
-  predictions with errors e1, e2 can be up to e1 + e2 apart, and in our
-  tests `seed` fragmented objects into many small clusters, so the default
-  is `sum`: seed radius + candidate radius. Set `seed` to follow the paper.
+- **Clustering radius** (`cluster.radius_mode`, an option, not a deviation).
+  The default `seed` follows the paper: a candidate joins if it lies within
+  the seed's learned radius. `sum` (seed radius + candidate radius) is offered
+  for noisy offsets, where `seed` fragments objects; which works better on
+  real data is measured with `tools/upper_bounds.py` rather than assumed.
 
 ## Modernisation compared to the semantic task
 
@@ -98,6 +98,83 @@ Start with `sensor.width=1024`, `train.batch_size=2`, `train.accumulate=4`,
 `freeze_backbone_bn: true`. Use width 512 only for debugging: thing classes
 degrade badly at that resolution (RangeNet++ Table I). Keep `workers` at or
 below the number of physical cores.
+
+## Real numbers without training
+
+`tools/` measures things on real SemanticKITTI data without training
+anything, from as little as 1 GB of data. Results go to JSON with `--json`.
+
+**1. Data: one sequence, or a subset of one.** The KITTI archive is 85 GB,
+but single scans can be read out of it remotely, together with their labels:
+
+```sh
+pip install remotezip
+python tools/fetch_sequences.py -o /data/kitti -s 08 --max-scans 500   # ~1 GB
+# dataset root for every other command: /data/kitti/dataset
+```
+
+Sequence sizes (velodyne): 00 8.8 GB, 01 1.9, 02 9.4, 03 1.6, 04 0.55,
+05 5.5, 06 2.2, 07 2.1, 08 (validation) 8.0, 09 3.2, 10 2.4. KITTI is for
+non-commercial use: accept its terms at
+[cvlibs.net](https://www.cvlibs.net/datasets/kitti/eval_odometry.php) first.
+
+**2. Projection and clustering ceilings** (ground truth only, CPU):
+
+```sh
+python tools/upper_bounds.py -d /data/kitti/dataset -s 8 --max-scans 200 --json bounds.json
+```
+
+For each image width: points kept by the projection, thing instances that
+nearly vanish, and the PQ a perfect network would reach, which is the
+ceiling of the range-image approach. Then clustering with true centre offsets
+plus 0 / 0.1 / 0.2 / 0.4 m of noise under the paper's radius rule (`seed`),
+the `sum` option and a fixed radius: how accurate the offsets must be, and
+which rule to use.
+
+**3. Training-free panoptic baseline:** RangeNet++ semantics + Euclidean
+clustering. First get semantic predictions with a pre-trained RangeNet++ (see
+the top-level README for model links). This also checks that the 2019
+checkpoints load:
+
+```sh
+cd ../semantic && python infer.py -d /data/kitti/dataset -l /data/rangenet_preds -m /models/darknet53
+cd ../panoptic
+python tools/baseline.py -d /data/kitti/dataset -p /data/rangenet_preds -s 08 --json baseline.json
+python tools/baseline.py -d /data/kitti/dataset --semantics gt -s 08   # clustering alone
+```
+
+The paper's comparable number is its two-stage baseline, RangeNet++ +
+PointPillars (37.1 PQ on the test set, Table I).
+
+**4. Speed and memory on your GPU** (random weights, no dataset needed):
+
+```sh
+python tools/benchmark.py --widths 512 1024 2048 --batch-sizes 1 2 4 --amp bf16 --json bench.json
+```
+
+Network and clustering milliseconds per scan, and the peak memory of a
+training step per width and batch size: what fits on a 6 GB GPU. Use
+`--amp fp16` on GPUs without bf16 (e.g. T4).
+
+**5. Training on a subset**, when you get there: any sequences can be
+selected, e.g. the small 03, 04 and 07 (4.3 GB) with 200 validation scans:
+
+```sh
+python train.py -d /data/kitti/dataset -l logs/subset -p /models/darknet53 \
+    --set train.split.train=[3,4,7] train.val_max_scans=200 sensor.width=1024
+```
+
+## Results of this implementation
+
+Sequence 08 (validation). Fill in as runs complete; record the command and
+commit.
+
+| Run | Scans | PQ | PQ-th | PQ-st | mIoU | Notes |
+|---|---|---|---|---|---|---|
+| Projection ceiling, 64 x 1024 | | | | | | `upper_bounds.py` |
+| RangeNet++ (darknet53) + clustering | | | | | | `baseline.py` |
+| True semantics + clustering | | | | | | `baseline.py --semantics gt` |
+| LPSAD, trained on a subset | | | | | | `train.py` |
 
 ## Reference results (paper, SemanticKITTI)
 

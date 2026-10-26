@@ -32,9 +32,11 @@ def main():
     count = 0
     for seq in cfg["train"]["split"][args.split]:
         seq = f"{int(seq):02d}"
-        gt_dir = Path(args.dataset) / "sequences" / seq / "labels"
+        root = Path(args.dataset) / "sequences" / seq
         pred_dir = Path(args.predictions) / "sequences" / seq / "predictions"
-        for gt_file in sorted(gt_dir.glob("*.label")):
+        # the scans present define the evaluation set (subsets are allowed)
+        for scan in sorted((root / "velodyne").glob("*.bin")):
+            gt_file = root / "labels" / f"{scan.stem}.label"
             pred_file = pred_dir / gt_file.name
             if not pred_file.exists():
                 raise FileNotFoundError(pred_file)
