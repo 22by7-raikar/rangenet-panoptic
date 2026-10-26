@@ -1,6 +1,9 @@
-# TensorBoard logger with the interface of the original TensorFlow 1 logger
-# (https://gist.github.com/gyglim/1f8dfb1b5c82627ae3efcfbbadb9f514), on top of
-# torch.utils.tensorboard. Logging is skipped if tensorboard is not installed.
+"""TensorBoard logger for the semantic task.
+
+Keeps the interface of the original TensorFlow 1 logger
+(https://gist.github.com/gyglim/1f8dfb1b5c82627ae3efcfbbadb9f514) on top of
+``torch.utils.tensorboard``. Logging is skipped if tensorboard is missing.
+"""
 
 import numpy as np
 
@@ -11,6 +14,7 @@ except ImportError:  # tensorboard not installed
 
 
 class Logger(object):
+  """Scalar, image and histogram summaries in one TensorBoard log directory."""
 
   def __init__(self, log_dir):
     """Create a summary writer logging to log_dir."""

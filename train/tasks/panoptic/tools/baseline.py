@@ -14,6 +14,8 @@ them. No training and no GPU needed.
 
 Use ``--radius`` (metres, all thing classes) and ``--class-radius
 person=0.3`` to tune the linking distance.
+
+@ingroup tools
 """
 
 import argparse
@@ -32,12 +34,14 @@ DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "lpsad-darknet
 
 
 def summary(res: dict) -> dict:
+    """Headline metrics in percent, rounded."""
     keys = ("PQ", "PQ_dagger", "RQ", "SQ", "PQ_th", "RQ_th", "SQ_th", "PQ_st", "mIoU")
     return {k: round(100 * res[k], 2) for k in keys}
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-d", "--dataset", required=True,
                     help="root with sequences/XX/{velodyne,labels}")

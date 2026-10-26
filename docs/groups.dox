@@ -1,0 +1,32 @@
+/**
+@defgroup data Data pipeline
+@brief Reading SemanticKITTI scans, range projection and training targets.
+@details See the data pipeline section of the architecture page. Diagram:
+@image html data-pipeline.svg "" width=100%
+
+@defgroup model Network
+@brief Shared Darknet encoder, point cloud pyramid, distance-aware trilinear
+upsampling, semantic and instance decoders and heads.
+@image html panoptic-model.svg "" width=100%
+@image html trilinear.svg "" width=100%
+
+@defgroup losses Losses
+@brief Paper Eqs. 2-7 and the category loss.
+
+@defgroup inference Inference and instance extraction
+@brief From network outputs to per-point classes and instance ids.
+@image html inference.svg "" width=100%
+
+@defgroup evaluation Evaluation
+@brief Point-level PQ, RQ, SQ, PQ-dagger and mIoU (semantic-kitti-api logic).
+
+@defgroup training Training
+@brief Optimisation loop, validation, checkpoints and configuration.
+@image html training.svg "" width=100%
+
+@defgroup tools Analysis tools (no training)
+@brief Data download, training-free baseline, ceilings, benchmark, figures, reports.
+
+@defgroup cli Command-line entry points
+@brief train.py, infer.py and evaluate.py.
+*/

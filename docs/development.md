@@ -23,7 +23,7 @@ cd train/tasks/panoptic && python -m pytest tests
 | `test_dataset.py` | projection keeps the closest point, instance targets, item contract, collate |
 | `test_model.py` | point pyramid, trilinear weights (normalised, exact matches, wrap-around, fallbacks, gradient), forward/backward, transpose and lower output stride, RangeNet++ checkpoint loading |
 | `test_losses_cluster_metrics.py` | zero losses for perfect predictions, repel behaviour, clustering separates objects and classes, radius modes, PQ on hand-computed cases |
-| `test_tools.py` | Euclidean clustering, scan and label selection when fetching, `baseline.py`, `upper_bounds.py`, `benchmark.py` end to end |
+| `test_tools.py` | Euclidean clustering, scan and label selection when fetching, every tool end to end (`baseline`, `upper_bounds`, `benchmark`, `visualize`, `report`) |
 | `test_pipeline.py` | train, checkpoint, resume, `infer.py`, `evaluate.py` end to end; a one-batch overfit |
 
 All tests use `tests/synthetic.py`, which writes small SemanticKITTI-format
@@ -57,8 +57,18 @@ make -C docs html          # diagrams + API reference -> docs/_build/html/index.
 - Markdown pages: `README.md` (also the Doxygen main page) and `docs/*.md`.
   They're written for GitHub first; Doxygen renders the same files.
 - API reference: Doxygen reads the Python docstrings (`PYTHON_DOCSTRING = NO`,
-  so Markdown and Doxygen commands in docstrings are rendered). Start each
-  docstring with a one-line summary; describe tensor shapes in the docstring.
+  so Markdown and Doxygen commands in docstrings are rendered).
+  - Every module, class and function in linted code has a docstring; ruff's
+    `D1xx` rules enforce it. `__init__` arguments are documented on the class.
+  - Start with a one-line summary. Use `@param` and `@return` where arguments
+    aren't obvious, and give tensor shapes, e.g. `(B, 3, H, W)`.
+  - Each module docstring ends with `@ingroup <subsystem>`. The groups (data,
+    model, losses, inference, evaluation, training, tools, cli) are defined
+    in `docs/groups.dox` and appear as *Topics* in the HTML, with diagrams.
+- Code walkthrough: `docs/code-walkthrough.md`. Update it when a step of the
+  pipeline changes.
+- Figures: `docs/figures/README.md` lists the command for every image; rerun
+  them after changes that affect the figures.
 - Warnings go to `docs/_build/doxygen-warnings.log`; CI fails if it isn't
   empty.
 

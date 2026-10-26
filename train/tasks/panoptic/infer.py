@@ -11,6 +11,8 @@ Clustering settings can be changed per run (paper Table IV ablations):
 Labels go to OUT/sequences/XX/predictions/NNNNNN.label as
 ``semantic_id | (instance_id << 16)``, the format of the official benchmark
 and semantic-kitti-api.
+
+@ingroup cli
 """
 
 import argparse
@@ -30,7 +32,8 @@ from lpsad.trainer import autocast_context, to_device
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-m", "--model", required=True, help="checkpoint (.pt)")
     ap.add_argument("-d", "--dataset", required=True)

@@ -16,6 +16,8 @@ Sizes (velodyne only): 00 8.8 GB, 01 1.9, 02 9.4, 03 1.6, 04 0.55, 05 5.5,
 
 KITTI data is licensed for non-commercial use; register and accept the terms
 at https://www.cvlibs.net/datasets/kitti/eval_odometry.php before downloading.
+
+@ingroup tools
 """
 
 import argparse
@@ -51,6 +53,10 @@ def open_archive(location: str):
 
 
 def extract(archive, names: list[str], out: Path, what: str):
+    """Copy members of an archive to ``out``, skipping files that exist.
+
+    Writes to ``.part`` first, so an interrupted download is retried.
+    """
     for i, name in enumerate(names):
         target = out / name
         if target.exists():
@@ -64,11 +70,13 @@ def extract(archive, names: list[str], out: Path, what: str):
 
 
 def label_name(scan: str) -> str:
+    """Path of the label file in the labels archive that belongs to a scan."""
     return scan.replace("/velodyne/", "/labels/").removesuffix(".bin") + ".label"
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-o", "--out", required=True, help="dataset root (gets sequences/)")
     ap.add_argument("-s", "--sequences", nargs="+", required=True, help="e.g. 08 or 03 04")

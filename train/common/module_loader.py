@@ -1,4 +1,4 @@
-# Replacement for imp.load_source, which was removed in Python 3.12.
+"""Replacement for ``imp.load_source``, which was removed in Python 3.12."""
 
 import importlib.util
 

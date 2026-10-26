@@ -178,6 +178,8 @@ trained model. Each tool writes JSON (`--json`).
 | `upper_bounds.py` | What the range image loses (points, instances, PQ ceiling); how accurate offsets must be; `seed` vs `sum` radius | Scans + labels |
 | `baseline.py` | PQ of any semantic segmentation + `lpsad/geometric.py` Euclidean clustering; `--semantics gt` isolates clustering | Scans + labels + semantic predictions |
 | `benchmark.py` | Network and clustering time per scan; peak training memory per width and batch size | Nothing (synthetic scans); a GPU for memory |
+| `visualize.py` | Figures: a scan (range image, classes, instances, bird's-eye view), points kept per width, upsampling error at edges | Scans; labels or predictions for class panels |
+| `report.py` | Markdown tables and charts from the JSON of the tools above | Their `--json` output |
 
 `lpsad/geometric.py` links thing points of the same class closer than a
 radius (k-d tree + connected components). This is the classic

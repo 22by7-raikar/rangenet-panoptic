@@ -12,6 +12,8 @@ Weights are random: speed and memory don't depend on them. Without
 
     python tools/benchmark.py --widths 512 1024 2048 --batch-sizes 1 2 4 --amp bf16
     python tools/benchmark.py -d /data/semantic-kitti --widths 1024 --json bench.json
+
+@ingroup tools
 """
 
 import argparse
@@ -37,11 +39,19 @@ from lpsad.trainer import autocast_context, to_device  # noqa: E402
 
 
 def sync(device):
+    """Wait for queued GPU work so timings are real."""
     if device.type == "cuda":
         torch.cuda.synchronize()
 
 
 def timed(fn, device, warmup, iters):
+    """Median wall time of ``fn`` in milliseconds.
+
+    @param fn      function to time
+    @param device  device to synchronise
+    @param warmup  untimed calls first
+    @param iters   timed calls
+    """
     for _ in range(warmup):
         fn()
     times = []
@@ -55,6 +65,7 @@ def timed(fn, device, warmup, iters):
 
 
 def dataset(cfg, labels, args, width, root):
+    """Config and dataset at the given image width."""
     cfg = copy.deepcopy(cfg)
     cfg["sensor"]["width"] = width
     return cfg, SemanticKittiPanoptic(root, args.sequences, cfg, labels, gt=True,
@@ -62,6 +73,11 @@ def dataset(cfg, labels, args, width, root):
 
 
 def bench_width(cfg, labels, args, width, root, device):
+    """Inference time, clustering time and training memory at one width.
+
+    @return dict with ``network_ms``, ``clustering_ms`` (with labels) and
+            ``train_peak_gb`` (on CUDA) per batch size
+    """
     cfg, ds = dataset(cfg, labels, args, width, root)
     model = LPSAD(cfg, labels.nclasses, labels.ncategories).to(device)
     result = {"width": width}
@@ -123,7 +139,8 @@ def bench_width(cfg, labels, args, width, root, device):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-d", "--dataset", help="SemanticKITTI root with labels (optional)")
     ap.add_argument("-s", "--sequences", nargs="+", type=int, default=[8])

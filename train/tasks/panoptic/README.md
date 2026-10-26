@@ -156,7 +156,19 @@ Network and clustering milliseconds per scan, and the peak memory of a
 training step per width and batch size: what fits on a 6 GB GPU. Use
 `--amp fp16` on GPUs without bf16 (e.g. T4).
 
-**5. Training on a subset**, when you get there: any sequences can be
+**5. Figures and tables for slides.** `visualize.py` draws a scan (range
+image, classes and instances from labels and predictions, bird's-eye view)
+and two label-free figures. `report.py` turns the JSON from steps 2-4 into
+Markdown tables and charts:
+
+```sh
+python tools/visualize.py scan -d /data/kitti/dataset -s 08 --index 0 -p preds_geo -o scan.png
+python tools/report.py bounds.json baseline.json bench.json -o report
+```
+
+See [docs/figures](../../../docs/figures/README.md) for examples.
+
+**6. Training on a subset**, when you get there: any sequences can be
 selected, e.g. the small 03, 04 and 07 (4.3 GB) with 200 validation scans:
 
 ```sh

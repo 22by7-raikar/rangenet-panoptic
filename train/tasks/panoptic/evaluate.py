@@ -5,6 +5,8 @@
 
 For numbers you report, cross-check with the official semantic-kitti-api
 ``evaluate_panoptic.py``.
+
+@ingroup cli
 """
 
 import argparse
@@ -17,7 +19,8 @@ from lpsad.metrics import PanopticEval
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
+    """Command-line entry point."""
+    ap = argparse.ArgumentParser(description=__doc__.split("@ingroup")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-d", "--dataset", required=True)
     ap.add_argument("-p", "--predictions", required=True)
