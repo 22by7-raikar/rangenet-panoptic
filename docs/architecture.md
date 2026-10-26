@@ -147,8 +147,8 @@ nearest-neighbour upsampling.
    unassigned seed. Every unassigned pixel of the same class whose predicted
    centre `x - offset`, and/or embedding, lies within the radius joins its
    instance. Remove those pixels and repeat until none are left. The radius is
-   the seed's (`radius_mode: seed`, paper) or seed plus candidate (`sum`,
-   default, see the design decisions).
+   the seed's (`radius_mode: seed`, paper, default) or seed plus candidate
+   (`sum`, see the design decisions).
 3. Unproject: every original point takes the labels of its pixel `(px, py)`
    (paper Sec. III-E).
 4. `infer.py` writes `inverse_lut[class] | (instance << 16)` as `uint32`.
@@ -166,6 +166,23 @@ nearest-neighbour upsampling.
 It reports PQ, PQ† (IoU in place of PQ for stuff classes), RQ, SQ, the thing and
 stuff splits, mIoU and per-class values. `evaluate.py` runs it over a
 predictions folder. Use the official script for numbers you publish.
+
+## Subsystem: analysis tools (no training)
+
+`train/tasks/panoptic/tools/` produces real SemanticKITTI numbers with no
+trained model. Each tool writes JSON (`--json`).
+
+| Tool | Answers | Needs |
+|---|---|---|
+| `fetch_sequences.py` | Get selected sequences, or an evenly spaced subset, plus their labels | Network; reads single files from the KITTI zip with HTTP range requests |
+| `upper_bounds.py` | What the range image loses (points, instances, PQ ceiling); how accurate offsets must be; `seed` vs `sum` radius | Scans + labels |
+| `baseline.py` | PQ of any semantic segmentation + `lpsad/geometric.py` Euclidean clustering; `--semantics gt` isolates clustering | Scans + labels + semantic predictions |
+| `benchmark.py` | Network and clustering time per scan; peak training memory per width and batch size | Nothing (synthetic scans); a GPU for memory |
+
+`lpsad/geometric.py` links thing points of the same class closer than a
+radius (k-d tree + connected components). This is the classic
+"semantics + clustering" baseline: it can't separate touching objects of one
+class, which is what LPSAD's learned offsets address.
 
 ## Configuration
 

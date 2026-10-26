@@ -2,5 +2,7 @@
 torch>=2.1
 numpy>=1.24
 PyYAML>=6.0
+scipy>=1.10         # tools/baseline.py (Euclidean clustering)
+remotezip>=0.12     # tools/fetch_sequences.py (optional)
 pytest>=7.0
 tensorboard>=2.14  # optional, for training curves

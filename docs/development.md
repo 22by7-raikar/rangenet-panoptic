@@ -23,6 +23,7 @@ cd train/tasks/panoptic && python -m pytest tests
 | `test_dataset.py` | projection keeps the closest point, instance targets, item contract, collate |
 | `test_model.py` | point pyramid, trilinear weights (normalised, exact matches, wrap-around, fallbacks, gradient), forward/backward, transpose and lower output stride, RangeNet++ checkpoint loading |
 | `test_losses_cluster_metrics.py` | zero losses for perfect predictions, repel behaviour, clustering separates objects and classes, radius modes, PQ on hand-computed cases |
+| `test_tools.py` | Euclidean clustering, scan and label selection when fetching, `baseline.py`, `upper_bounds.py`, `benchmark.py` end to end |
 | `test_pipeline.py` | train, checkpoint, resume, `infer.py`, `evaluate.py` end to end; a one-batch overfit |
 
 All tests use `tests/synthetic.py`, which writes small SemanticKITTI-format
@@ -72,7 +73,7 @@ make -C docs diagrams      # re-renders the changed *.svg; commit both files
 Keep the shared style: header comment naming the code it describes,
 `Helvetica`, rounded filled boxes, one colour per subsystem (blue: shared
 encoder and geometry, green: semantic, red: instance/panoptic, amber: files and
-outputs).
+outputs, purple: analysis tools).
 
 ## Continuous integration
 

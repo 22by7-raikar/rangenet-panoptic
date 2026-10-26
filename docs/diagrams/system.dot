@@ -34,6 +34,7 @@ digraph system {
     dec2 -> heads -> clus;
   }
 
+  tools [label="Analysis tools (no training)\nupper bounds | clustering baseline | benchmark\ntrain/tasks/panoptic/tools", fillcolor="#f3eefb", color="#7b5ea7"];
   out  [label="predictions/*.label  (benchmark format)", shape=note, fillcolor="#fff7e0", color="#b08900"];
   eval [label="Evaluation:  mIoU  |  PQ, RQ, SQ, PQ-dagger\nsemantic-kitti-api compatible", fillcolor="#fff7e0", color="#b08900"];
 
@@ -44,5 +45,8 @@ digraph system {
   knn -> out;
   clus -> out;
   out -> eval;
+  labels -> tools [style=dotted];
+  knn -> tools [style=dotted, label=" semantics"];
+  tools -> eval [style=dotted];
   {rank=same; semdec; dec2}
 }

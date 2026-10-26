@@ -11,4 +11,5 @@ matplotlib>=3.7
 Pillow>=10.0
 tensorboard>=2.14
 vispy>=0.12        # semantic task visualisation only
+remotezip>=0.12    # downloading single KITTI sequences
 pytest>=7.0
